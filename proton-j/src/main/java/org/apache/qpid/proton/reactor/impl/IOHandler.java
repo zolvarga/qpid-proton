@@ -208,6 +208,13 @@ public class IOHandler extends BaseHandler {
             if (pending > 0) {
                 SocketChannel channel = (SocketChannel)selectable.getChannel();
                 try {
+//                    int size = transport.head().limit();
+//                    int pos = transport.head().position();
+//                    byte[] bytes = new byte[size];
+//                    transport.head().get(bytes);
+//                    System.out.println(bytesToHex(bytes));
+//                    transport.head().position(pos);
+
                     int n = channel.write(transport.head());
                     if (n < 0) {
                         transport.close_head();
@@ -230,6 +237,20 @@ public class IOHandler extends BaseHandler {
             }
         }
     };
+
+//    final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
+//    public static String bytesToHex(byte[] bytes) {
+//        char[] hexChars = new char[bytes.length * 5];
+//        for ( int j = 0; j < bytes.length; j++ ) {
+//            int v = bytes[j] & 0xFF;
+//            hexChars[j * 5] = '0';
+//            hexChars[j * 5 + 1] = 'x';
+//            hexChars[j * 5 + 2] = hexArray[v >>> 4];
+//            hexChars[j * 5 + 3] = hexArray[v & 0x0F];
+//            hexChars[j * 5 + 4] = ' ';
+//        }
+//        return new String(hexChars);
+//    }
 
     // pni_connection_error from connection.c
     private static Callback connectionError = new Callback() {
