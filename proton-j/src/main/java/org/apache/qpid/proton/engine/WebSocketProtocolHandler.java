@@ -23,11 +23,11 @@ package org.apache.qpid.proton.engine;
 
 import java.nio.ByteBuffer;
 
-public interface ExternalWebSocketHandler
+public interface WebSocketProtocolHandler
 {
     String createUpgradeRequest();
-    Boolean validateUpgradeReply(String reply);
-    ByteBuffer wrap(ByteBuffer srcBuffer, ByteBuffer dstBuffer);
-    ByteBuffer unwrap(ByteBuffer srcBuffer, ByteBuffer dstBuffer);
-    ByteBuffer createPong(ByteBuffer ping);
+    void validateUpgradeReply(ByteBuffer buffer);
+    void wrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer);
+    void unwrapBuffer(ByteBuffer buffer);
+    void createPong(ByteBuffer srcBuffer, ByteBuffer dstBuffer);
 }

@@ -21,7 +21,7 @@
 
 package org.apache.qpid.proton.engine.impl;
 
-import org.apache.qpid.proton.engine.ExternalWebSocketHandler;
+import org.apache.qpid.proton.engine.WebSocketProtocolHandler;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.WebSocket;
@@ -37,7 +37,7 @@ public class WebSocketImpl implements WebSocket
 {
     private static final Logger _logger = Logger.getLogger(WebSocketImpl.class.getName());
 
-    private ExternalWebSocketHandler _externalWebSocketHandler;
+    private WebSocketProtocolHandler _webSocketHandler;
 
     private final TransportImpl _transport;
 
@@ -54,12 +54,18 @@ public class WebSocketImpl implements WebSocket
      *                     returned by {@link WebSocketTransportWrapper#getInputBuffer()} and
      *                     {@link WebSocketTransportWrapper#getOutputBuffer()}.
      */
-    WebSocketImpl(TransportImpl transport, int maxFrameSize, ExternalWebSocketHandler externalWebSocketHandler, Boolean isEnabled)
+    WebSocketImpl(TransportImpl transport, int maxFrameSize, WebSocketProtocolHandler externalWebSocketHandler, Boolean isEnabled)
     {
         _transport = transport;
         _inputBuffer = newWriteableBuffer(maxFrameSize);
         _outputBuffer = newWriteableBuffer(maxFrameSize);
-        _externalWebSocketHandler = externalWebSocketHandler;
+        if (externalWebSocketHandler != null) {
+            _webSocketHandler = externalWebSocketHandler;
+        }
+        else
+        {
+            _webSocketHandler = new WebSocketProtocol();
+        }
         _webSocketEnabled = isEnabled;
     }
 
@@ -71,7 +77,7 @@ public class WebSocketImpl implements WebSocket
     private void writeUpgradeRequest()
     {
         _outputBuffer.clear();
-        _outputBuffer.put(WebSocketProtocol.createUpgradeRequestEcho().getBytes());
+        _outputBuffer.put(_webSocketHandler.createUpgradeRequest().getBytes());
 
         if (_logger.isLoggable(Level.FINER))
         {
@@ -79,7 +85,6 @@ public class WebSocketImpl implements WebSocket
         }
     }
 
-    @Override
     public TransportWrapper wrap(final TransportInput input, final TransportOutput output)
     {
         return new WebSocketSniffer(new WebSocketTransportWrapper(input, output), new PlainTransportWrapper(output, input))
@@ -93,10 +98,27 @@ public class WebSocketImpl implements WebSocket
     }
 
     @Override
-    public TransportWrapper unwrap(TransportInput inputProcessor, TransportOutput outputProcessor)
+    public void wrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer) {
+        _webSocketHandler.wrapBuffer(srcBuffer, dstBuffer);
+    }
+
+    @Override
+    public void unwrapBuffer(ByteBuffer buffer) {
+        _webSocketHandler.unwrapBuffer(buffer);
+    }
+
+    @Override
+    public WebSocketState getState()
     {
         // TODO: Implement function
-        return null;
+        return _state;
+    }
+
+    @Override
+    public int pending()
+    {
+        // TODO: Implement function
+        return 0;
     }
 
     @Override
@@ -111,20 +133,6 @@ public class WebSocketImpl implements WebSocket
     {
         // TODO: Implement function
         return size;
-    }
-
-    @Override
-    public int pending()
-    {
-        // TODO: Implement function
-        return 0;
-    }
-
-    @Override
-    public WebSocketState getState()
-    {
-        // TODO: Implement function
-        return _state;
     }
 
     @Override
@@ -150,33 +158,44 @@ public class WebSocketImpl implements WebSocket
 
         private void processInput() throws TransportException
         {
-            if (_state == WebSocketState.PN_WS_CONNECTING)
-            {
-                // Validate reply here !!!!!!!!!!!!!!!!!!!!!
-                _state = WebSocketState.PN_WS_CONNECTED;
+            switch (_state) {
+                case PN_WS_NOT_STARTED:
+                    break;
+                case PN_WS_CONNECTING:
+                    _webSocketHandler.validateUpgradeReply(_inputBuffer);
 
-                if (_logger.isLoggable(Level.FINER))
-                {
-                    _logger.log(Level.FINER, WebSocketImpl.this + " about to call plain input");
-                }
+                    _state = WebSocketState.PN_WS_CONNECTED;
 
-                if (_inputBuffer.hasRemaining())
-                {
-                    int bytes = pourAll(_inputBuffer, _underlyingInput);
-                    if (bytes == Transport.END_OF_STREAM)
+                    if (_logger.isLoggable(Level.FINER))
                     {
-                        _tail_closed = true;
+                        _logger.log(Level.FINER, WebSocketImpl.this + " about to call plain input");
                     }
-//                    _underlyingInput.process();
-                }
-                else
-                {
-                    //                    _underlyingInput.process();
+                    break;
+                case PN_WS_CONNECTED:
+                    if (_inputBuffer.hasRemaining())
+                    {
+                        int bytes = pourAll(_inputBuffer, _underlyingInput);
+                        if (bytes == Transport.END_OF_STREAM)
+                        {
+                            _tail_closed = true;
+                        }
+                        _underlyingInput.process();
+                    }
+                    else
+                    {
+    //                    _underlyingInput.process();
 
-                    byte[] bytes = new byte[5];
-                    _underlyingInput.tail().get(bytes);
-                    System.out.println(new String(bytes, Charset.forName("UTF-8")));
-                }
+                        byte[] bytes = new byte[5];
+                        _underlyingInput.tail().get(bytes);
+                        System.out.println(new String(bytes, Charset.forName("UTF-8")));
+                    }
+                    break;
+                case PN_WS_CLOSED:
+                    break;
+                case PN_WS_FAILED:
+                    break;
+                default:
+                    break;
             }
         }
 
@@ -246,6 +265,7 @@ public class WebSocketImpl implements WebSocket
                         _underlyingInput.process();
                         break;
                     case PN_WS_CONNECTING:
+                    case PN_WS_CONNECTED:
                         try
                         {
                             processInput();
@@ -253,10 +273,6 @@ public class WebSocketImpl implements WebSocket
                         {
                             _inputBuffer.compact();
                         }
-                        break;
-                    case PN_WS_CONNECTED:
-                        // Look for PING here!!!!!!!
-                        _underlyingInput.process();
                         break;
                     case PN_WS_FAILED:
                         _underlyingInput.process();

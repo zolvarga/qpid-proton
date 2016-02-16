@@ -20,7 +20,6 @@ package org.apache.qpid.proton.engine;
  *
 */
 
-
 public interface Sasl
 {
     public enum SaslState
@@ -163,6 +162,16 @@ public interface Sasl
      *                     mechanism
      */
     void plain(String username, String password);
+
+    /**
+     * Configure the SASL layer to use the WebSocket
+     *
+     * A utility function to configure SASL layer to use
+     * WebSocket wrapBuffer/unwrapBuffer.
+     *
+     * @param webSocket WebSOcketInpl for wrapBuffer/unwrapBuffer frames
+     */
+    void websocket(WebSocket webSocket);
 
     /**
      * Retrieve the outcome of SASL negotiation.

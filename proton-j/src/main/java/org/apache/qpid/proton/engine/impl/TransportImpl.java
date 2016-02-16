@@ -48,7 +48,7 @@ import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Event;
-import org.apache.qpid.proton.engine.ExternalWebSocketHandler;
+import org.apache.qpid.proton.engine.WebSocketProtocolHandler;
 import org.apache.qpid.proton.engine.ProtonJTransport;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Ssl;
@@ -361,7 +361,7 @@ public class TransportImpl extends EndpointImpl
     }
 
     @Override
-    public WebSocket webSocket(ExternalWebSocketHandler externalWebSocket, Boolean isEnabled)
+    public WebSocket webSocket(WebSocketProtocolHandler externalWebSocket, Boolean isEnabled)
     {
         if (_webSocket == null)
         {

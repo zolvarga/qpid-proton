@@ -29,7 +29,6 @@ import java.nio.ByteBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.qpid.proton.ProtonUnsupportedOperationException;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.security.SaslChallenge;
@@ -44,6 +43,7 @@ import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
+import org.apache.qpid.proton.engine.WebSocket;
 
 public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>, SaslFrameHandler
 {
@@ -85,6 +85,8 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
     private Role _role;
     private boolean _allowSkip = true;
 
+    private WebSocketImpl _webSocketImpl = null;
+
     /**
      * @param maxFrameSize the size of the input and output buffers
      * returned by {@link SaslTransportWrapper#getInputBuffer()} and
@@ -122,7 +124,16 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
     private void writeSaslOutput()
     {
         process();
-        _frameWriter.readBytes(_outputBuffer);
+        if (_webSocketImpl == null) {
+            _frameWriter.readBytes(_outputBuffer);
+        }
+        else
+        {
+            ByteBuffer _tempBuffer = newWriteableBuffer(_outputBuffer.capacity());
+            _frameWriter.readBytes(_tempBuffer);
+            _tempBuffer.flip();
+            _webSocketImpl.wrapBuffer(_tempBuffer, _outputBuffer);
+        }
 
         if(_logger.isLoggable(Level.FINER))
         {
@@ -454,6 +465,12 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
     }
 
     @Override
+    public void websocket(WebSocket webSocket)
+    {
+        this._webSocketImpl = (WebSocketImpl)webSocket;
+    }
+
+    @Override
     public SaslOutcome getOutcome()
     {
         return _outcome;
@@ -627,7 +644,14 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
                     _logger.log(Level.FINER, SaslImpl.this + " about to call input.");
                 }
 
-                _frameParser.input(_inputBuffer);
+                if (_webSocketImpl == null) {
+                    _frameParser.input(_inputBuffer);
+                }
+                else
+                {
+                    _webSocketImpl.unwrapBuffer(_inputBuffer);
+                    _frameParser.input(_inputBuffer);
+                }
             }
 
             if(!isInputInSaslMode())
