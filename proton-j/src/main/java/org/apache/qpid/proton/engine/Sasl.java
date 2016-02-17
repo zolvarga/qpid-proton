@@ -169,7 +169,7 @@ public interface Sasl
      * A utility function to configure SASL layer to use
      * WebSocket wrapBuffer/unwrapBuffer.
      *
-     * @param webSocket WebSOcketInpl for wrapBuffer/unwrapBuffer frames
+     * @param webSocket WebSocketInpl for wrapBuffer/unwrapBuffer frames
      */
     void websocket(WebSocket webSocket);
 

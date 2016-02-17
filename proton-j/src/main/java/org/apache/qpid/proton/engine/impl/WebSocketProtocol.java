@@ -21,41 +21,105 @@ package org.apache.qpid.proton.engine.impl;
 
 import org.apache.qpid.proton.engine.WebSocketProtocolHandler;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.Random;
 
 public class WebSocketProtocol implements WebSocketProtocolHandler
 {
-    @Override
-    public String createUpgradeRequest()
+    final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
+
+    public static String bytesToHex(byte[] bytes, int max) {
+        char[] hexChars = new char[bytes.length * 5];
+        for ( int j = 0; j < max; j++ ) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 5] = '0';
+            hexChars[j * 5 + 1] = 'x';
+            hexChars[j * 5 + 2] = hexArray[v >>> 4];
+            hexChars[j * 5 + 3] = hexArray[v & 0x0F];
+            hexChars[j * 5 + 4] = ' ';
+        }
+        return new String(hexChars);
+    }
+
+    public static void clearLogFile() throws IOException
     {
-        return createUpgradeRequestEcho();
-//        String host = "zolvargahub.azure-devices.net"; // 168.61.54.255
-//        String path = "/$iothub/websocket";
-//
-//        String key = "mQzPElOHKd+RwPyWnWOJiQ==";
-//        String endOfLine = "\r\n";
-//        StringBuilder stringBuilder = new StringBuilder()
-//                .append("GET /").append(path).append(" HTTP/1.1").append(endOfLine)
-//                .append("Host: ").append(host).append(endOfLine)
-//                .append("Connection: Upgrade").append(endOfLine)
-//                .append("Upgrade: websocket").append(endOfLine)
-//                .append("Sec-WebSocket-Version: 13").append(endOfLine)
-//                .append("Sec-WebSocket-Key: ").append(key).append(endOfLine)
-//                .append("Sec-WebSocket-Protocol: AMQPWSB10").append(endOfLine)
-//                .append("Sec-WebSocket-Extensions: permessage-deflate").append(endOfLine).append(endOfLine);
-//
-//        String upgradeRequest = stringBuilder.toString();
-//        return upgradeRequest;
+        PrintWriter printWriter = new PrintWriter(new FileWriter(new File("E:/Documents/java-proton-j-websocket/log.txt"), false));
+        printWriter.close();
+    }
+
+    public static void printBuffer(String title, ByteBuffer buffer) throws IOException
+    {
+        PrintWriter printWriter = new PrintWriter(new FileWriter(new File("E:/Documents/java-proton-j-websocket/log.txt"), true));
+
+        int max = 10;
+        if ((buffer.limit() > 0) && (buffer.limit() < buffer.capacity()))
+        {
+            System.out.println(title + " : ");
+            printWriter.println(title + " : ");
+
+            int size = buffer.limit();
+            int pos = buffer.position();
+            byte[] bytes = new byte[size-pos];
+            buffer.get(bytes);
+//            System.out.println(WebSocketProtocol.bytesToHex(bytes, max));
+            if (max > buffer.limit())
+            {
+                max = buffer.limit();
+            }
+            printWriter.println(WebSocketProtocol.bytesToHex(bytes, max));
+            for (int i = 0; i < bytes.length; i++)
+            {
+                System.out.print((char) bytes[i]);
+                printWriter.write((char) bytes[i]);
+            }
+            System.out.println();
+            printWriter.println();
+            System.out.println("***************************************************");
+            printWriter.println("***************************************************");
+            printWriter.close();
+
+            buffer.position(pos);
+        }
     }
 
     @Override
-    public void validateUpgradeReply(ByteBuffer buffer) {
-        byte[] data = new byte[buffer.remaining()];
-        buffer.get(data);
+    public String createUpgradeRequest()
+    {
+//        return createUpgradeRequestEcho();
+//        String host = "zolvargahub.azure-devices.net"; // 168.61.54.255
+//        String path = "/$iothub/websocket";
+        String host = "iot-sdks-test.azure-devices.net"; // 168.61.54.255
+        String path = "https://iot-sdks-test.azure-devices.net/$iothub/websocket";
+
+        String key = "mQzPElOHKd+RwPyWnWOJiQ==";
+        String endOfLine = "\r\n";
+        StringBuilder stringBuilder = new StringBuilder()
+                .append("GET ").append(path).append(" HTTP/1.1").append(endOfLine)
+                .append("Connection: Upgrade,Keep-Alive").append(endOfLine)
+                .append("Upgrade: websocket").append(endOfLine)
+                .append("Sec-WebSocket-Key: ").append(key).append(endOfLine)
+                .append("Sec-WebSocket-Version: 13").append(endOfLine)
+                .append("Sec-WebSocket-Protocol: AMQPWSB10").append(endOfLine)
+                .append("Host: ").append(host).append(endOfLine)
+//                .append("Sec-WebSocket-Extensions: permessage-deflate").append(endOfLine).append(endOfLine)
+                ;
+
+        String upgradeRequest = stringBuilder.toString();
+        return upgradeRequest;
+    }
+
+    @Override
+    public Boolean validateUpgradeReply(ByteBuffer buffer) {
+        int size = buffer.remaining();
+        if (size > 0)
+        {
+            byte[] data = new byte[buffer.remaining()];
+            buffer.get(data);
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -160,6 +224,8 @@ public class WebSocketProtocol implements WebSocketProtocolHandler
                 // TODO: add Limit for WebSocket Payload Length.
                 payload_length = buffer.getLong();
             }
+            buffer.compact();
+            buffer.flip();
         }
     }
 

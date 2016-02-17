@@ -26,7 +26,7 @@ import java.nio.ByteBuffer;
 public interface WebSocketProtocolHandler
 {
     String createUpgradeRequest();
-    void validateUpgradeReply(ByteBuffer buffer);
+    Boolean validateUpgradeReply(ByteBuffer buffer);
     void wrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer);
     void unwrapBuffer(ByteBuffer buffer);
     void createPong(ByteBuffer srcBuffer, ByteBuffer dstBuffer);

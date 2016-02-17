@@ -20,6 +20,7 @@ package org.apache.qpid.proton.engine.impl;
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourArrayToBuffer;
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourBufferToArray;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
@@ -366,7 +367,13 @@ public class TransportImpl extends EndpointImpl
         if (_webSocket == null)
         {
             init();
-            _webSocket = new WebSocketImpl(this, _remoteMaxFrameSize, externalWebSocket, isEnabled);
+            try
+            {
+                _webSocket = new WebSocketImpl(this, _remoteMaxFrameSize, externalWebSocket, isEnabled);
+            } catch (IOException e)
+            {
+                e.printStackTrace();
+            }
             TransportWrapper transportWrapper = _webSocket.wrap(_inputProcessor, _outputProcessor);
             _inputProcessor = transportWrapper;
             _outputProcessor = transportWrapper;

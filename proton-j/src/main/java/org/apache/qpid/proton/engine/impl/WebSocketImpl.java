@@ -26,6 +26,7 @@ import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.WebSocket;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.logging.Level;
@@ -54,7 +55,7 @@ public class WebSocketImpl implements WebSocket
      *                     returned by {@link WebSocketTransportWrapper#getInputBuffer()} and
      *                     {@link WebSocketTransportWrapper#getOutputBuffer()}.
      */
-    WebSocketImpl(TransportImpl transport, int maxFrameSize, WebSocketProtocolHandler externalWebSocketHandler, Boolean isEnabled)
+    WebSocketImpl(TransportImpl transport, int maxFrameSize, WebSocketProtocolHandler externalWebSocketHandler, Boolean isEnabled) throws IOException
     {
         _transport = transport;
         _inputBuffer = newWriteableBuffer(maxFrameSize);
@@ -67,6 +68,8 @@ public class WebSocketImpl implements WebSocket
             _webSocketHandler = new WebSocketProtocol();
         }
         _webSocketEnabled = isEnabled;
+
+        WebSocketProtocol.clearLogFile();
     }
 
     public void setEnabled(Boolean isEnabled)
@@ -77,7 +80,11 @@ public class WebSocketImpl implements WebSocket
     private void writeUpgradeRequest()
     {
         _outputBuffer.clear();
-        _outputBuffer.put(_webSocketHandler.createUpgradeRequest().getBytes());
+        String request = _webSocketHandler.createUpgradeRequest();
+        System.out.println("WEBSOCKETIMPL is sending: ");
+        System.out.println(request);
+        System.out.println("***************************************************");
+        _outputBuffer.put(request.getBytes());
 
         if (_logger.isLoggable(Level.FINER))
         {
@@ -162,9 +169,10 @@ public class WebSocketImpl implements WebSocket
                 case PN_WS_NOT_STARTED:
                     break;
                 case PN_WS_CONNECTING:
-                    _webSocketHandler.validateUpgradeReply(_inputBuffer);
-
-                    _state = WebSocketState.PN_WS_CONNECTED;
+                    if (_webSocketHandler.validateUpgradeReply(_inputBuffer))
+                    {
+                        _state = WebSocketState.PN_WS_CONNECTED;
+                    }
 
                     if (_logger.isLoggable(Level.FINER))
                     {
@@ -183,7 +191,7 @@ public class WebSocketImpl implements WebSocket
                     }
                     else
                     {
-    //                    _underlyingInput.process();
+                        _underlyingInput.process();
 
                         byte[] bytes = new byte[5];
                         _underlyingInput.tail().get(bytes);
@@ -265,7 +273,6 @@ public class WebSocketImpl implements WebSocket
                         _underlyingInput.process();
                         break;
                     case PN_WS_CONNECTING:
-                    case PN_WS_CONNECTED:
                         try
                         {
                             processInput();
@@ -273,6 +280,9 @@ public class WebSocketImpl implements WebSocket
                         {
                             _inputBuffer.compact();
                         }
+                        break;
+                    case PN_WS_CONNECTED:
+                        processInput();
                         break;
                     case PN_WS_FAILED:
                         _underlyingInput.process();
