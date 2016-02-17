@@ -25,6 +25,7 @@ import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.newWriteableBuf
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourAll;
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourBufferToArray;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -124,14 +125,24 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
     private void writeSaslOutput()
     {
         process();
-        if (_webSocketImpl == null) {
-            _frameWriter.readBytes(_outputBuffer);
+
+        ByteBuffer _tempBuffer = newWriteableBuffer(_outputBuffer.capacity());
+        _frameWriter.readBytes(_tempBuffer);
+        _tempBuffer.flip();
+        try
+        {
+            WebSocketProtocol.printBuffer("SASLImpl is sending", _tempBuffer);
+        } catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+
+        if (_webSocketImpl == null)
+        {
+            _outputBuffer.put(_tempBuffer);
         }
         else
         {
-            ByteBuffer _tempBuffer = newWriteableBuffer(_outputBuffer.capacity());
-            _frameWriter.readBytes(_tempBuffer);
-            _tempBuffer.flip();
             _webSocketImpl.wrapBuffer(_tempBuffer, _outputBuffer);
         }
 

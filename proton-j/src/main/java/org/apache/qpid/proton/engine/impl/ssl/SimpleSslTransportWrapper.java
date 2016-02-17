@@ -23,6 +23,7 @@ package org.apache.qpid.proton.engine.impl.ssl;
 
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.newWriteableBuffer;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -36,6 +37,7 @@ import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.impl.TransportInput;
 import org.apache.qpid.proton.engine.impl.TransportOutput;
+import org.apache.qpid.proton.engine.impl.WebSocketProtocol;
 
 /**
  * TODO close the SSLEngine when told to, and modify {@link #wrapOutput()} and {@link #unwrapInput()}
@@ -123,6 +125,14 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
             } else {
                 ByteBuffer tail = _underlyingInput.tail();
                 _decodedInputBuffer.flip();
+                try
+                {
+                    WebSocketProtocol.printBuffer("SimpleSslTransportWrapper received and decoded", _decodedInputBuffer);
+                } catch (IOException e)
+                {
+                    e.printStackTrace();
+                }
+
                 int limit = _decodedInputBuffer.limit();
                 int overflow = _decodedInputBuffer.remaining() - capacity;
                 if (overflow > 0) {
@@ -203,6 +213,13 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
             }
 
             ByteBuffer clearOutputBuffer = _underlyingOutput.head();
+            try
+            {
+                WebSocketProtocol.printBuffer("SimpleSslTransportWrapper is sending", clearOutputBuffer);
+            } catch (IOException e)
+            {
+                e.printStackTrace();
+            }
             SSLEngineResult result = _sslEngine.wrap(clearOutputBuffer, _outputBuffer);
             logEngineClientModeAndResult(result, "output");
 
