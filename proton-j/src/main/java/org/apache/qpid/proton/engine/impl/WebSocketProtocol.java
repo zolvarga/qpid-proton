@@ -64,11 +64,14 @@ public class WebSocketProtocol implements WebSocketProtocolHandler
             byte[] bytes = new byte[size-pos];
             buffer.get(bytes);
 //            System.out.println(WebSocketProtocol.bytesToHex(bytes, max));
-            if (max > buffer.limit())
-            {
-                max = buffer.limit();
-            }
-            printWriter.println(WebSocketProtocol.bytesToHex(bytes, max));
+//            if (max > buffer.limit())
+//            {
+//                max = buffer.limit();
+//            }
+//            printWriter.println(WebSocketProtocol.bytesToHex(bytes, max));
+            System.out.println("size=" + bytes.length);
+            printWriter.println("size=" + bytes.length);
+
             for (int i = 0; i < bytes.length; i++)
             {
                 System.out.print((char) bytes[i]);
@@ -88,21 +91,26 @@ public class WebSocketProtocol implements WebSocketProtocolHandler
     public String createUpgradeRequest()
     {
 //        return createUpgradeRequestEcho();
-//        String host = "zolvargahub.azure-devices.net"; // 168.61.54.255
-//        String path = "/$iothub/websocket";
-        String host = "iot-sdks-test.azure-devices.net"; // 168.61.54.255
-        String path = "https://iot-sdks-test.azure-devices.net/$iothub/websocket";
+//        String host = "echo.websocket.org:80"; // 168.61.54.255
+//        String path = "";
+
+        String host = "zolvargahub.azure-devices.net"; // 168.61.54.255
+        String path = "/$iothub/websocket";
+////        String host = "iot-sdks-test.azure-devices.net"; // 168.61.54.255
+////        String path = "/$iothub/websocket";
 
         String key = "mQzPElOHKd+RwPyWnWOJiQ==";
         String endOfLine = "\r\n";
         StringBuilder stringBuilder = new StringBuilder()
-                .append("GET ").append(path).append(" HTTP/1.1").append(endOfLine)
-                .append("Connection: Upgrade,Keep-Alive").append(endOfLine)
+                .append("GET /").append(path).append(" HTTP/1.1").append(endOfLine)
+                .append("Connection: Upgrade").append(endOfLine)
                 .append("Upgrade: websocket").append(endOfLine)
                 .append("Sec-WebSocket-Key: ").append(key).append(endOfLine)
                 .append("Sec-WebSocket-Version: 13").append(endOfLine)
                 .append("Sec-WebSocket-Protocol: AMQPWSB10").append(endOfLine)
-                .append("Host: ").append(host).append(endOfLine)
+                .append("Host: ").append(host)
+                .append(endOfLine)
+                .append(endOfLine)
 //                .append("Sec-WebSocket-Extensions: permessage-deflate").append(endOfLine).append(endOfLine)
                 ;
 
@@ -117,6 +125,7 @@ public class WebSocketProtocol implements WebSocketProtocolHandler
         {
             byte[] data = new byte[buffer.remaining()];
             buffer.get(data);
+            buffer.compact();
             return true;
         }
         return false;
@@ -130,7 +139,7 @@ public class WebSocketProtocol implements WebSocketProtocolHandler
         else {
             byte[] data = new byte[srcBuffer.remaining()];
             srcBuffer.get(data);
-            Boolean masking = false;
+            Boolean masking = true;
             byte OPCODE_TEXT = 0x1;
             byte OPCODE_BINARY = 0x2;
 
@@ -210,14 +219,20 @@ public class WebSocketProtocol implements WebSocketProtocolHandler
             return;
         }
         else {
-            byte b = buffer.get();
-            byte opcode = (byte) (b & 0xf);
-            byte length = buffer.get();
+            byte firstByte = buffer.get();
+            byte finBit = (byte) (firstByte & 0x80);
+            byte opcode = (byte) (firstByte & 0x0f);
+
+            byte secondByte = buffer.get();
+            byte maskBit = (byte) (secondByte & 0x80);
+            byte length = (byte) (secondByte & 0x7f);
+
             long payload_length = 0;
+
             if (length < 126) {
                 payload_length = length;
             } else if (length == 126) {
-                payload_length = ((0xff & buffer.get()) << 8) | (0xff & buffer.get());
+                payload_length = buffer.getShort();
             } else if (length == 127) {
                 // Does work up to MAX_VALUE of long (2^63-1) after that minus values are returned.
                 // However frames with such a high payload length are vastly unrealistic.

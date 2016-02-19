@@ -180,22 +180,38 @@ public class WebSocketImpl implements WebSocket
                     }
                     break;
                 case PN_WS_CONNECTED:
-                    if (_inputBuffer.hasRemaining())
+                    Boolean isRepeatedUpgradeAccept = false;
+                    int size = _inputBuffer.remaining();
+                    if (size > 0)
                     {
-                        int bytes = pourAll(_inputBuffer, _underlyingInput);
-                        if (bytes == Transport.END_OF_STREAM)
+                        byte[] data = new byte[_inputBuffer.remaining()];
+                        _inputBuffer.get(data);
+                        if ((data[0] == 72) && (data[1] == 84))
                         {
+                            _inputBuffer.compact();
+                            isRepeatedUpgradeAccept = true;
+                        }
+                    }
+
+                    if (!isRepeatedUpgradeAccept)
+                    {
+                        _inputBuffer.flip();
+                        int bytes = pourAll(_inputBuffer, _underlyingInput);
+                        if (bytes == Transport.END_OF_STREAM) {
                             _tail_closed = true;
                         }
-                        _underlyingInput.process();
-                    }
-                    else
-                    {
-                        _underlyingInput.process();
+                        _inputBuffer.compact();
+                        
+//                        _underlyingInput.process();
 
-                        byte[] bytes = new byte[5];
-                        _underlyingInput.tail().get(bytes);
-                        System.out.println(new String(bytes, Charset.forName("UTF-8")));
+//                        if (_inputBuffer.hasRemaining()) {
+//                        } else {
+//                            _underlyingInput.process();
+//
+//                            byte[] bytes = new byte[5];
+//                            _underlyingInput.tail().get(bytes);
+//                            System.out.println(new String(bytes, Charset.forName("UTF-8")));
+//                        }
                     }
                     break;
                 case PN_WS_CLOSED:
@@ -371,14 +387,16 @@ public class WebSocketImpl implements WebSocket
         {
             if (_webSocketEnabled)
             {
-                if (_outputBuffer.position() != 0)
-                {
-                    pending();
-                    return _head;
-                }
-                else
-                {
-                    return _underlyingOutput.head();
+                switch (_state) {
+                    case PN_WS_CONNECTING:
+                        pending();
+                        return _head;
+                    case PN_WS_CONNECTED:
+                    case PN_WS_NOT_STARTED:
+                    case PN_WS_CLOSED:
+                    case PN_WS_FAILED:
+                    default:
+                        return _underlyingOutput.head();
                 }
             }
             else
