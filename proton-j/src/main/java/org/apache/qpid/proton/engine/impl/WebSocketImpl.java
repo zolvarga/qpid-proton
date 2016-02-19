@@ -196,6 +196,9 @@ public class WebSocketImpl implements WebSocket
                     if (!isRepeatedUpgradeAccept)
                     {
                         _inputBuffer.flip();
+
+                        WebSocketProtocol.unwrapB(_inputBuffer);
+
                         int bytes = pourAll(_inputBuffer, _underlyingInput);
                         if (bytes == Transport.END_OF_STREAM) {
                             _tail_closed = true;

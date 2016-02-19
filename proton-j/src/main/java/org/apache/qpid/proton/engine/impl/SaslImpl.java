@@ -660,7 +660,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
                 }
                 else
                 {
-                    _webSocketImpl.unwrapBuffer(_inputBuffer);
+//                    _webSocketImpl.unwrapBuffer(_inputBuffer);
                     _frameParser.input(_inputBuffer);
                 }
             }

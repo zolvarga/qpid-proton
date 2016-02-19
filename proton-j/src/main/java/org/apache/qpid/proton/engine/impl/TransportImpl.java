@@ -17,6 +17,7 @@
 
 package org.apache.qpid.proton.engine.impl;
 
+import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.newWriteableBuffer;
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourArrayToBuffer;
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourBufferToArray;
 
@@ -336,7 +337,11 @@ public class TransportImpl extends EndpointImpl
         processEnd();
         processClose();
 
-        _frameWriter.readBytes(outputBuffer);
+
+        ByteBuffer _tempBuffer = newWriteableBuffer(outputBuffer.capacity());
+        _frameWriter.readBytes(_tempBuffer);
+        _tempBuffer.flip();
+        WebSocketProtocol.wrapB(_tempBuffer, outputBuffer);
 
         return _isCloseSent || _head_closed;
     }
