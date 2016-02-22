@@ -205,16 +205,7 @@ public class WebSocketImpl implements WebSocket
                         }
                         _inputBuffer.compact();
                         
-//                        _underlyingInput.process();
-
-//                        if (_inputBuffer.hasRemaining()) {
-//                        } else {
-//                            _underlyingInput.process();
-//
-//                            byte[] bytes = new byte[5];
-//                            _underlyingInput.tail().get(bytes);
-//                            System.out.println(new String(bytes, Charset.forName("UTF-8")));
-//                        }
+                        _underlyingInput.process();
                     }
                     break;
                 case PN_WS_CLOSED:
