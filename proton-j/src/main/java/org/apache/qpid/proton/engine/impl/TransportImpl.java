@@ -375,6 +375,7 @@ public class TransportImpl extends EndpointImpl
             try
             {
                 _webSocket = new WebSocketImpl(this, _remoteMaxFrameSize, webSocketHandler, isEnabled);
+                _sasl.websocket(_webSocket);
             } catch (IOException e)
             {
                 e.printStackTrace();

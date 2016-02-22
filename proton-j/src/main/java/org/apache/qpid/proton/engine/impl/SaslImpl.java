@@ -137,14 +137,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
             e.printStackTrace();
         }
 
-        if (_webSocketImpl == null)
-        {
-            _outputBuffer.put(_tempBuffer);
-        }
-        else
-        {
-            _webSocketImpl.wrapBuffer(_tempBuffer, _outputBuffer);
-        }
+        _webSocketImpl.wrapBuffer(_tempBuffer, _outputBuffer);
 
         if(_logger.isLoggable(Level.FINER))
         {
@@ -655,14 +648,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
                     _logger.log(Level.FINER, SaslImpl.this + " about to call input.");
                 }
 
-                if (_webSocketImpl == null) {
-                    _frameParser.input(_inputBuffer);
-                }
-                else
-                {
-//                    _webSocketImpl.unwrapBuffer(_inputBuffer);
-                    _frameParser.input(_inputBuffer);
-                }
+                _frameParser.input(_inputBuffer);
             }
 
             if(!isInputInSaslMode())

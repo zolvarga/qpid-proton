@@ -37,8 +37,6 @@ public class WebSocketImpl implements WebSocket
 {
     private static final Logger _logger = Logger.getLogger(WebSocketImpl.class.getName());
 
-    private WebSocketHandler _webSocketHandler;
-
     private final TransportImpl _transport;
 
     private boolean _tail_closed = false;
@@ -46,7 +44,8 @@ public class WebSocketImpl implements WebSocket
     private boolean _head_closed = false;
     private final ByteBuffer _outputBuffer;
 
-    private Boolean _webSocketEnabled = false;
+    private WebSocketHandler _webSocketHandler;
+    private Boolean _isWebSocketEnabled = false;
     private WebSocketState _state = WebSocketState.PN_WS_NOT_STARTED;
 
     /**
@@ -66,14 +65,14 @@ public class WebSocketImpl implements WebSocket
         {
             _webSocketHandler = new WebSocketHandlerImpl();
         }
-        _webSocketEnabled = isEnabled;
+        _isWebSocketEnabled = isEnabled;
 
         WebSocketHandlerImpl.clearLogFile();
     }
 
     public void setEnabled(Boolean isEnabled)
     {
-        _webSocketEnabled = isEnabled;
+        _isWebSocketEnabled = isEnabled;
     }
 
     private void writeUpgradeRequest()
@@ -105,12 +104,22 @@ public class WebSocketImpl implements WebSocket
 
     @Override
     public void wrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer) {
-        _webSocketHandler.wrapBuffer(srcBuffer, dstBuffer);
+        if (_isWebSocketEnabled)
+        {
+            _webSocketHandler.wrapBuffer(srcBuffer, dstBuffer);
+        }
+        else
+        {
+            dstBuffer.put(srcBuffer);
+        }
     }
 
     @Override
     public void unwrapBuffer(ByteBuffer buffer) {
-        _webSocketHandler.unwrapBuffer(buffer);
+        if (_isWebSocketEnabled)
+        {
+            _webSocketHandler.unwrapBuffer(buffer);
+        }
     }
 
     @Override
@@ -219,7 +228,7 @@ public class WebSocketImpl implements WebSocket
         @Override
         public int capacity()
         {
-            if (_webSocketEnabled)
+            if (_isWebSocketEnabled)
             {
                 if (_tail_closed)
                 {
@@ -239,7 +248,7 @@ public class WebSocketImpl implements WebSocket
         @Override
         public int position()
         {
-            if (_webSocketEnabled)
+            if (_isWebSocketEnabled)
             {
                 if (_tail_closed)
                 {
@@ -259,7 +268,7 @@ public class WebSocketImpl implements WebSocket
         @Override
         public ByteBuffer tail()
         {
-            if (_webSocketEnabled)
+            if (_isWebSocketEnabled)
             {
                 return _inputBuffer;
             }
@@ -272,7 +281,7 @@ public class WebSocketImpl implements WebSocket
         @Override
         public void process() throws TransportException
         {
-            if (_webSocketEnabled)
+            if (_isWebSocketEnabled)
             {
                 _inputBuffer.flip();
 
@@ -310,7 +319,7 @@ public class WebSocketImpl implements WebSocket
         public void close_tail()
         {
             _tail_closed = true;
-            if (_webSocketEnabled)
+            if (_isWebSocketEnabled)
             {
                 _head_closed = true;
                 _underlyingInput.close_tail();
@@ -324,7 +333,7 @@ public class WebSocketImpl implements WebSocket
         @Override
         public int pending()
         {
-            if (_webSocketEnabled)
+            if (_isWebSocketEnabled)
             {
                 switch (_state)
                 {
@@ -378,7 +387,7 @@ public class WebSocketImpl implements WebSocket
         @Override
         public ByteBuffer head()
         {
-            if (_webSocketEnabled)
+            if (_isWebSocketEnabled)
             {
                 switch (_state) {
                     case PN_WS_CONNECTING:
@@ -401,7 +410,7 @@ public class WebSocketImpl implements WebSocket
         @Override
         public void pop(int bytes)
         {
-            if (_webSocketEnabled)
+            if (_isWebSocketEnabled)
             {
                 if (_outputBuffer.position() != 0)
                 {
