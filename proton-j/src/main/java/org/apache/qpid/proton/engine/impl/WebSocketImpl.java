@@ -28,7 +28,6 @@ import org.apache.qpid.proton.engine.WebSocket;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 

@@ -59,8 +59,6 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
     private ByteBuffer _outputBuffer;
     private ByteBuffer _head;
 
-//    private Boolean runOnce = false;
-
     /**
      * A buffer for the decoded bytes that will be passed to _underlyingInput.
      * This extra layer of buffering is necessary in case the underlying input's buffer
@@ -393,10 +391,7 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
     public int pending()
     {
         try {
-//            if (!runOnce) {
-                wrapOutput();
-//                runOnce = true;
-//            }
+            wrapOutput();
         } catch (SSLException e) {
             _logger.log(Level.WARNING, e.getMessage());
             _head_closed = true;
