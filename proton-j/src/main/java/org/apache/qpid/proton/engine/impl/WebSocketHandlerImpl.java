@@ -19,14 +19,14 @@
 
 package org.apache.qpid.proton.engine.impl;
 
-import org.apache.qpid.proton.engine.WebSocketProtocolHandler;
+import org.apache.qpid.proton.engine.WebSocketHandler;
 
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.Random;
 
-public class WebSocketProtocol implements WebSocketProtocolHandler
+public class WebSocketHandlerImpl implements WebSocketHandler
 {
     final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
 
@@ -63,12 +63,12 @@ public class WebSocketProtocol implements WebSocketProtocolHandler
             int pos = buffer.position();
             byte[] bytes = new byte[size-pos];
             buffer.get(bytes);
-//            System.out.println(WebSocketProtocol.bytesToHex(bytes, max));
+//            System.out.println(WebSocketHandlerImpl.bytesToHex(bytes, max));
 //            if (max > buffer.limit())
 //            {
 //                max = buffer.limit();
 //            }
-//            printWriter.println(WebSocketProtocol.bytesToHex(bytes, max));
+//            printWriter.println(WebSocketHandlerImpl.bytesToHex(bytes, max));
             System.out.println("size=" + bytes.length);
             printWriter.println("size=" + bytes.length);
 

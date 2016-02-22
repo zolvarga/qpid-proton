@@ -50,7 +50,7 @@ import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Event;
-import org.apache.qpid.proton.engine.WebSocketProtocolHandler;
+import org.apache.qpid.proton.engine.WebSocketHandler;
 import org.apache.qpid.proton.engine.ProtonJTransport;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Ssl;
@@ -341,7 +341,7 @@ public class TransportImpl extends EndpointImpl
         ByteBuffer _tempBuffer = newWriteableBuffer(outputBuffer.capacity());
         _frameWriter.readBytes(_tempBuffer);
         _tempBuffer.flip();
-        WebSocketProtocol.wrapB(_tempBuffer, outputBuffer);
+        WebSocketHandlerImpl.wrapB(_tempBuffer, outputBuffer);
 
         return _isCloseSent || _head_closed;
     }
@@ -367,14 +367,14 @@ public class TransportImpl extends EndpointImpl
     }
 
     @Override
-    public WebSocket webSocket(WebSocketProtocolHandler externalWebSocket, Boolean isEnabled)
+    public WebSocket webSocket(WebSocketHandler webSocketHandler, Boolean isEnabled)
     {
         if (_webSocket == null)
         {
             init();
             try
             {
-                _webSocket = new WebSocketImpl(this, _remoteMaxFrameSize, externalWebSocket, isEnabled);
+                _webSocket = new WebSocketImpl(this, _remoteMaxFrameSize, webSocketHandler, isEnabled);
             } catch (IOException e)
             {
                 e.printStackTrace();

@@ -21,7 +21,7 @@
 
 package org.apache.qpid.proton.engine.impl;
 
-import org.apache.qpid.proton.engine.WebSocketProtocolHandler;
+import org.apache.qpid.proton.engine.WebSocketHandler;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.WebSocket;
@@ -37,7 +37,7 @@ public class WebSocketImpl implements WebSocket
 {
     private static final Logger _logger = Logger.getLogger(WebSocketImpl.class.getName());
 
-    private WebSocketProtocolHandler _webSocketHandler;
+    private WebSocketHandler _webSocketHandler;
 
     private final TransportImpl _transport;
 
@@ -54,7 +54,7 @@ public class WebSocketImpl implements WebSocket
      *                     returned by {@link WebSocketTransportWrapper#getInputBuffer()} and
      *                     {@link WebSocketTransportWrapper#getOutputBuffer()}.
      */
-    WebSocketImpl(TransportImpl transport, int maxFrameSize, WebSocketProtocolHandler externalWebSocketHandler, Boolean isEnabled) throws IOException
+    WebSocketImpl(TransportImpl transport, int maxFrameSize, WebSocketHandler externalWebSocketHandler, Boolean isEnabled) throws IOException
     {
         _transport = transport;
         _inputBuffer = newWriteableBuffer(maxFrameSize);
@@ -64,11 +64,11 @@ public class WebSocketImpl implements WebSocket
         }
         else
         {
-            _webSocketHandler = new WebSocketProtocol();
+            _webSocketHandler = new WebSocketHandlerImpl();
         }
         _webSocketEnabled = isEnabled;
 
-        WebSocketProtocol.clearLogFile();
+        WebSocketHandlerImpl.clearLogFile();
     }
 
     public void setEnabled(Boolean isEnabled)
@@ -196,7 +196,7 @@ public class WebSocketImpl implements WebSocket
                     {
                         _inputBuffer.flip();
 
-                        WebSocketProtocol.unwrapB(_inputBuffer);
+                        WebSocketHandlerImpl.unwrapB(_inputBuffer);
 
                         int bytes = pourAll(_inputBuffer, _underlyingInput);
                         if (bytes == Transport.END_OF_STREAM) {

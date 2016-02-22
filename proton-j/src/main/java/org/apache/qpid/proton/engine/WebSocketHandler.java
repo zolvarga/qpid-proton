@@ -23,7 +23,7 @@ package org.apache.qpid.proton.engine;
 
 import java.nio.ByteBuffer;
 
-public interface WebSocketProtocolHandler
+public interface WebSocketHandler
 {
     String createUpgradeRequest();
     Boolean validateUpgradeReply(ByteBuffer buffer);
