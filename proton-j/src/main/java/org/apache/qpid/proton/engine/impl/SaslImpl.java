@@ -131,7 +131,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
         _tempBuffer.flip();
         try
         {
-            WebSocketHandlerImpl.printBuffer("SASLImpl is sending", _tempBuffer);
+            WebSocketTools.printBuffer("SASLImpl is sending", _tempBuffer);
         } catch (IOException e)
         {
             e.printStackTrace();

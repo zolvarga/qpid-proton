@@ -67,7 +67,7 @@ public class WebSocketImpl implements WebSocket
         }
         _isWebSocketEnabled = isEnabled;
 
-        WebSocketHandlerImpl.clearLogFile();
+        WebSocketTools.clearLogFile();
     }
 
     public void setEnabled(Boolean isEnabled)

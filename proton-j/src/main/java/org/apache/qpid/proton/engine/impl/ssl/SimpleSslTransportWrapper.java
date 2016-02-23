@@ -38,6 +38,7 @@ import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.impl.TransportInput;
 import org.apache.qpid.proton.engine.impl.TransportOutput;
 import org.apache.qpid.proton.engine.impl.WebSocketHandlerImpl;
+import org.apache.qpid.proton.engine.impl.WebSocketTools;
 
 /**
  * TODO close the SSLEngine when told to, and modify {@link #wrapOutput()} and {@link #unwrapInput()}
@@ -127,7 +128,7 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
                 _decodedInputBuffer.flip();
                 try
                 {
-                    WebSocketHandlerImpl.printBuffer("SimpleSslTransportWrapper received and decoded", _decodedInputBuffer);
+                    WebSocketTools.printBuffer("SimpleSslTransportWrapper received and decoded", _decodedInputBuffer);
                 } catch (IOException e)
                 {
                     e.printStackTrace();
@@ -215,7 +216,7 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
             ByteBuffer clearOutputBuffer = _underlyingOutput.head();
             try
             {
-                WebSocketHandlerImpl.printBuffer("SimpleSslTransportWrapper is sending", clearOutputBuffer);
+                WebSocketTools.printBuffer("SimpleSslTransportWrapper is sending", clearOutputBuffer);
             } catch (IOException e)
             {
                 e.printStackTrace();
