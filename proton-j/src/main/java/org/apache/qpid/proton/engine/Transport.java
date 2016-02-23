@@ -20,9 +20,7 @@
  */
 package org.apache.qpid.proton.engine;
 
-import java.net.URI;
 import java.nio.ByteBuffer;
-import java.util.Map;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.engine.impl.TransportImpl;

@@ -27,7 +27,6 @@ import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.WebSocket;
 
 import java.io.IOException;
-import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.logging.Level;
@@ -52,13 +51,12 @@ public class WebSocketImpl implements WebSocket
     private String _path = "";
     private int _port = 0;
     private String _protocol = "";
-    private Map<String, String> _additionalHeaders;
+    private Map<String, String> _additionalHeaders = null;
 
     public WebSocketImpl(int maxFrameSize)
     {
         _inputBuffer = newWriteableBuffer(maxFrameSize);
         _outputBuffer = newWriteableBuffer(maxFrameSize);
-        setWebSocketHandler(null);
         _isWebSocketEnabled = false;
         try {
             WebSocketTools.clearLogFile();
@@ -75,47 +73,12 @@ public class WebSocketImpl implements WebSocket
             Map<String, String> additionalHeaders,
             WebSocketHandler webSocketHandler)
     {
-        setHost(host);
-        setPath(path);
-        setPort(port);
-        setProtocol(protocol);
-        setAdditionalHeaders(additionalHeaders);
-        setWebSocketHandler(webSocketHandler);
-        _isWebSocketEnabled = true;
-    }
-
-    public void setEnabled(Boolean isEnabled)
-    {
-        _isWebSocketEnabled = isEnabled;
-    }
-
-    public void setHost(String host)
-    {
         _host = host;
-    }
-
-    public void setPath(String path)
-    {
         _path = path;
-    }
-
-    public void setPort(int port)
-    {
         _port = port;
-    }
-
-    public void setProtocol(String protocol)
-    {
         _protocol = protocol;
-    }
-
-    public void setAdditionalHeaders(Map<String, String> additionalHeaders)
-    {
         _additionalHeaders = additionalHeaders;
-    }
 
-    public void setWebSocketHandler(WebSocketHandler webSocketHandler)
-    {
         if (webSocketHandler != null) {
             _webSocketHandler = webSocketHandler;
         }
@@ -123,6 +86,8 @@ public class WebSocketImpl implements WebSocket
         {
             _webSocketHandler = new WebSocketHandlerImpl();
         }
+
+        _isWebSocketEnabled = true;
     }
 
     private void writeUpgradeRequest()

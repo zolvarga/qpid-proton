@@ -1,13 +1,12 @@
 package org.apache.qpid.proton.engine.impl;
 
-import java.net.URI;
 import java.security.InvalidParameterException;
 import java.util.Base64;
 import java.util.Map;
 
 public class WebSocketUpgradeRequest
 {
-    private final String _colon = ":";
+    private final byte _colon = ':';
     private final byte _slash = '/';
 
     private String _host = "";
@@ -17,12 +16,17 @@ public class WebSocketUpgradeRequest
 
     private Map<String, String> _additionalHeaders = null;
 
-    public WebSocketUpgradeRequest(String hostName, String path, int port, String protocol, Map<String, String> additionalHeaders)
+    public WebSocketUpgradeRequest(
+            String hostName,
+            String webSocketPath,
+            int webSocketPort,
+            String webSocketProtocol,
+            Map<String, String> additionalHeaders)
     {
         setHost(hostName);
-        setPath(path);
-        setPort(port);
-        setProtocol(protocol);
+        setPath(webSocketPath);
+        setPort(webSocketPort);
+        setProtocol(webSocketProtocol);
         setAdditionalHeaders(additionalHeaders);
     }
 
@@ -33,14 +37,7 @@ public class WebSocketUpgradeRequest
      */
     public void setHost(String host)
     {
-        if (!host.isEmpty())
-        {
-            if (host.contains(_colon))
-            {
-                host = host.substring(0, host.indexOf(_colon));
-            }
-            this._host = host;
-        }
+        this._host = host;
     }
 
     /**
@@ -88,10 +85,7 @@ public class WebSocketUpgradeRequest
      */
     public void setProtocol(String protocol)
     {
-        if (!protocol.isEmpty())
-        {
-            _protocol = protocol;
-        }
+        _protocol = protocol;
     }
 
     /**
@@ -102,6 +96,14 @@ public class WebSocketUpgradeRequest
     public void setAdditionalHeaders(Map<String, String> additionalHeaders)
     {
         _additionalHeaders = additionalHeaders;
+    }
+
+    /**
+     * Utility function to clear all additional headers
+     */
+    public void clearAdditionalHeaders()
+    {
+        _additionalHeaders.clear();
     }
 
     /**
@@ -136,20 +138,17 @@ public class WebSocketUpgradeRequest
                 .append("Sec-WebSocket-Key: ").append(webSocketKey).append(_endOfLine)
                 .append("Sec-WebSocket-Protocol: ").append(_protocol).append(_endOfLine);
 
-        stringBuilder.append("Host: ").append(_host);
-        if (!_port.isEmpty())
-        {
-            stringBuilder.append(_port);
-        }
-        stringBuilder.append(_endOfLine);
+        stringBuilder.append("Host: ").append(_host + _port).append(_endOfLine);
 
-        if (_additionalHeaders != null) {
-            for (Map.Entry<String, String> entry : _additionalHeaders.entrySet()) {
-                stringBuilder.append(entry.getKey() + ": " + entry.getValue());
+        if (_additionalHeaders != null)
+        {
+            for (Map.Entry<String, String> entry : _additionalHeaders.entrySet())
+            {
+                stringBuilder.append(entry.getKey() + ": " + entry.getValue()).append(_endOfLine);
             }
         }
 
-        stringBuilder.append(_endOfLine).append(_endOfLine);
+        stringBuilder.append(_endOfLine);
 
         return stringBuilder.toString();
     }
