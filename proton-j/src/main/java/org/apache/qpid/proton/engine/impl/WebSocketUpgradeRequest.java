@@ -1,77 +1,149 @@
 package org.apache.qpid.proton.engine.impl;
 
+import org.omg.CORBA.ACTIVITY_REQUIRED;
+
+import java.net.URI;
 import java.security.InvalidParameterException;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 
 public class WebSocketUpgradeRequest
 {
-    private final String _httpMethod = "GET / ";
-    private final String _httpVersion = "HTTP/1.1";
-    private final String _connectionHeader = "Connection: Upgrade";
-    private final String _upgradeHeader = "Upgrade: websocket";
-    private final String _versionHeader = "Sec-WebSocket-Version: 13";
-
+    private final byte _colon = ':';
+    private final byte _slash = '/';
 
     private String _host = "";
     private String _path = "";
-    private String _key = "";
+    private String _port = "";
     private String _protocol = "AMQPWSB10";
 
+    private Map<String, String> _additionalHeaders = null;
+
+    public WebSocketUpgradeRequest(URI webSocketUri, String protocol, Map<String, String> additionalHeaders)
+    {
+        setHost(webSocketUri.getHost());
+        setPath(webSocketUri.getPath());
+        setPort(webSocketUri.getPort());
+        setProtocol(protocol);
+        setAdditionalHeaders(additionalHeaders);
+    }
+
+    /**
+     * Set host value in host header
+     *
+     * @param host The host header field value.
+     */
     public void setHost(String host)
     {
         this._host = host;
     }
 
+    /**
+     * Set port value in host header
+     *
+     * @param port The port header field value.
+     */
+    public void setPort(int port)
+    {
+        _port = String.valueOf(port);
+        if (!_port.isEmpty())
+        {
+            if (_port.charAt(0) != ':')
+            {
+                _port = _colon + _port;
+            }
+        }
+    }
+
+    /**
+     * Set path value in handshake
+     *
+     * @param path The path field value.
+     */
     public void setPath(String path)
     {
-        this._path = path;
+        _path = path;
+        if (!_path.isEmpty())
+        {
+            if (_path.charAt(0) != _slash)
+            {
+                _path = _slash + _path;
+            }
+        }
     }
 
+    /**
+     * Set protocol value in protocol header
+     *
+     * @param protocol The protocol header field value.
+     */
     public void setProtocol(String protocol)
     {
-        this._protocol = protocol;
+        _protocol = protocol;
     }
 
-//    /**
-//     * Sets the header field to the given value.
-//     *
-//     * @param field The header field name.
-//     * @param value The header field value.
-//     *
-//     * @return The object itself, for fluent setting.
-//     */
-//    public HttpRequest setHeaderField(String field, String value)
-//    {
-//        // Codes_SRS_SERVICE_SDK_JAVA_HTTPREQUEST_12_009: [The function shall set the header field with the given name to the given value.]
-//        this.connection.setRequestHeader(field, value);
-//        return this;
-//    }
-
-    @Override
-    public String toString()
+    /**
+     * Add field-value pairs to HTTP header
+     *
+     * @param additionalHeaders  The Map containing the additional headers.
+     */
+    public void setAdditionalHeaders(Map<String, String> additionalHeaders)
     {
-        _host = "iot-sdks-test.azure-devices.net";
+        _additionalHeaders = additionalHeaders;
+    }
+
+    /**
+     * Utility function to clear all additional headers
+     */
+    public void clearAdditionalHeaders()
+    {
+        _additionalHeaders.clear();
+    }
+
+    /**
+     * Utility function to create random, Base64 encoded key
+     */
+    private String createWebSocketKey()
+    {
+        byte[] key = new byte[16];
+        for (int i = 0; i < 16; i++)
+        {
+            key[i] = (byte) (int) (Math.random() * 255);
+        }
+        return String.valueOf(Base64.getEncoder().encode(key));
+    }
+
+    public String createUpgradeRequest()
+    {
         if (_host.isEmpty())
-            throw new InvalidParameterException("host string is empty");
+            throw new InvalidParameterException("host header has no value");
 
-        // GENERATE KEY!!!
-        _key = "mQzPElOHKd+RwPyWnWOJiQ==";
+        if (_protocol.isEmpty())
+            throw new InvalidParameterException("protocol header has no value");
 
-        _path = "/$iothub/websocket";
+        String webSocketKey = createWebSocketKey();
 
-        String endOfLine = "\r\n";
+        String _endOfLine = "\r\n";
         StringBuilder stringBuilder = new StringBuilder()
-                .append(_httpMethod).append(_path).append(_httpVersion).append(endOfLine)
-                .append("Connection: Upgrade").append(endOfLine)
-                .append("Upgrade: websocket").append(endOfLine)
-                .append("Sec-WebSocket-Key: ").append(_key).append(endOfLine)
-                .append("Sec-WebSocket-Version: 13").append(endOfLine)
-                .append("Sec-WebSocket-Protocol:").append(_protocol).append(endOfLine)
-                .append("Host: ").append(_host)
-                .append(endOfLine)
-                .append(endOfLine)
-                ;
+                .append("GET ").append(_path).append(" HTTP/1.1").append(_endOfLine)
+                .append("Connection: Upgrade").append(_endOfLine)
+                .append("Upgrade: websocket").append(_endOfLine)
+                .append("Sec-WebSocket-Version: 13").append(_endOfLine)
+                .append("Sec-WebSocket-Key: ").append(webSocketKey).append(_endOfLine)
+                .append("Sec-WebSocket-Protocol: ").append(_protocol).append(_endOfLine);
 
-        String upgradeRequest = stringBuilder.toString();
-        return upgradeRequest;
+        if (!_host.isEmpty())
+            stringBuilder.append("Host: ").append(_host + _port);
+
+        if (_additionalHeaders != null) {
+            for (Map.Entry<String, String> entry : _additionalHeaders.entrySet()) {
+                stringBuilder.append(entry.getKey() + ": " + entry.getValue());
+            }
+        }
+
+        stringBuilder.append(_endOfLine).append(_endOfLine);
+
+        return stringBuilder.toString();
     }
 }

@@ -27,7 +27,9 @@ import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.WebSocket;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.ByteBuffer;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -36,8 +38,6 @@ import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.*;
 public class WebSocketImpl implements WebSocket
 {
     private static final Logger _logger = Logger.getLogger(WebSocketImpl.class.getName());
-
-    private final TransportImpl _transport;
 
     private boolean _tail_closed = false;
     private final ByteBuffer _inputBuffer;
@@ -48,26 +48,21 @@ public class WebSocketImpl implements WebSocket
     private Boolean _isWebSocketEnabled = false;
     private WebSocketState _state = WebSocketState.PN_WS_NOT_STARTED;
 
-    /**
-     * @param maxFrameSize the size of the input and output buffers
-     *                     returned by {@link WebSocketTransportWrapper#getInputBuffer()} and
-     *                     {@link WebSocketTransportWrapper#getOutputBuffer()}.
-     */
-    WebSocketImpl(TransportImpl transport, int maxFrameSize, WebSocketHandler externalWebSocketHandler, Boolean isEnabled) throws IOException
+    private String _protocol = "";
+    private URI _webSocketUri = null;
+    private Map<String, String> _additionalHeaders;
+
+    public WebSocketImpl(int maxFrameSize)
     {
-        _transport = transport;
         _inputBuffer = newWriteableBuffer(maxFrameSize);
         _outputBuffer = newWriteableBuffer(maxFrameSize);
-        if (externalWebSocketHandler != null) {
-            _webSocketHandler = externalWebSocketHandler;
+        setWebSocketHandler(null);
+        _isWebSocketEnabled = false;
+        try {
+            WebSocketTools.clearLogFile();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        else
-        {
-            _webSocketHandler = new WebSocketHandlerImpl();
-        }
-        _isWebSocketEnabled = isEnabled;
-
-        WebSocketTools.clearLogFile();
     }
 
     public void setEnabled(Boolean isEnabled)
@@ -75,13 +70,43 @@ public class WebSocketImpl implements WebSocket
         _isWebSocketEnabled = isEnabled;
     }
 
+    public void setUri(URI webSocketUri)
+    {
+        _webSocketUri = webSocketUri;
+    }
+
+    public void setProtocol(String protocol)
+    {
+        _protocol = protocol;
+    }
+
+    public void setAdditionalHeaders(Map<String, String> additionalHeaders)
+    {
+        _additionalHeaders = additionalHeaders;
+    }
+
+    public void setWebSocketHandler(WebSocketHandler webSocketHandler)
+    {
+        if (webSocketHandler != null) {
+            _webSocketHandler = webSocketHandler;
+        }
+        else
+        {
+            _webSocketHandler = new WebSocketHandlerImpl();
+        }
+    }
+
     private void writeUpgradeRequest()
     {
+//        _host = "iot-sdks-test.azure-devices.net";
+//        _path = "/$iothub/websocket";
         _outputBuffer.clear();
-        String request = _webSocketHandler.createUpgradeRequest();
+        String request = _webSocketHandler.createUpgradeRequest(_webSocketUri, _protocol, _additionalHeaders);
+
         System.out.println("WEBSOCKETIMPL is sending: ");
         System.out.println(request);
         System.out.println("***************************************************");
+
         _outputBuffer.put(request.getBytes());
 
         if (_logger.isLoggable(Level.FINER))

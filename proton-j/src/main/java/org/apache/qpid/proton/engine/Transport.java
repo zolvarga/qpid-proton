@@ -20,7 +20,9 @@
  */
 package org.apache.qpid.proton.engine;
 
+import java.net.URI;
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.engine.impl.TransportImpl;
@@ -193,7 +195,7 @@ public interface Transport extends Endpoint
      * This method is expected to be called at most once. A subsequent invocation will return the same
      * {@link WebSocket} object, regardless of the parameters supplied.
      */
-    WebSocket webSocket(WebSocketHandler webSocketHandler, Boolean isEnabled);
+    WebSocket webSocket();
 
     /**
      * Wrap this transport's output and input to apply SSL encryption and decryption respectively.

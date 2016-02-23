@@ -22,40 +22,50 @@ package org.apache.qpid.proton.engine.impl;
 import org.apache.qpid.proton.engine.WebSocketHandler;
 
 import java.io.*;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
+import java.util.Map;
 import java.util.Random;
 
 public class WebSocketHandlerImpl implements WebSocketHandler
 {
-    @Override
-    public String createUpgradeRequest()
-    {
+//    @Override
+//    public String createUpgradeRequest(String host, String path, String port, String protocol, Map<String, String> additionalHeaders)
+//    {
 //        return createUpgradeRequestEcho();
 //        String host = "echo.websocket.org:80"; // 168.61.54.255
 //        String path = "";
 
 //        String host = "zolvargahub.azure-devices.net"; // 168.61.54.255
 //        String path = "/$iothub/websocket";
-        String host = "iot-sdks-test.azure-devices.net"; // 168.61.54.255
-        String path = "/$iothub/websocket";
+//        String host = "iot-sdks-test.azure-devices.net"; // 168.61.54.255
+//        String path = "/$iothub/websocket";
+//
+//        String key = "mQzPElOHKd+RwPyWnWOJiQ==";
+//        String endOfLine = "\r\n";
+//        StringBuilder stringBuilder = new StringBuilder()
+//                .append("GET /").append(path).append(" HTTP/1.1").append(endOfLine)
+//                .append("Connection: Upgrade").append(endOfLine)
+//                .append("Upgrade: websocket").append(endOfLine)
+//                .append("Sec-WebSocket-Key: ").append(key).append(endOfLine)
+//                .append("Sec-WebSocket-Version: 13").append(endOfLine)
+//                .append("Sec-WebSocket-Protocol: AMQPWSB10").append(endOfLine)
+//                .append("Host: ").append(host)
+//                .append(endOfLine)
+//                .append(endOfLine)
+//                ;
+//
+//        String upgradeRequest = stringBuilder.toString();
+//        return upgradeRequest;
+//
+//    }
 
-        String key = "mQzPElOHKd+RwPyWnWOJiQ==";
-        String endOfLine = "\r\n";
-        StringBuilder stringBuilder = new StringBuilder()
-                .append("GET /").append(path).append(" HTTP/1.1").append(endOfLine)
-                .append("Connection: Upgrade").append(endOfLine)
-                .append("Upgrade: websocket").append(endOfLine)
-                .append("Sec-WebSocket-Key: ").append(key).append(endOfLine)
-                .append("Sec-WebSocket-Version: 13").append(endOfLine)
-                .append("Sec-WebSocket-Protocol: AMQPWSB10").append(endOfLine)
-                .append("Host: ").append(host)
-                .append(endOfLine)
-                .append(endOfLine)
-                ;
-
-        String upgradeRequest = stringBuilder.toString();
-        return upgradeRequest;
+    @Override
+    public String createUpgradeRequest(URI webSocketUri, String protocol, Map<String, String> additionalHeaders)
+    {
+        WebSocketUpgradeRequest webSocketUpgradeRequest = new WebSocketUpgradeRequest(webSocketUri, protocol, additionalHeaders);
+        return webSocketUpgradeRequest.createUpgradeRequest();
     }
 
     @Override

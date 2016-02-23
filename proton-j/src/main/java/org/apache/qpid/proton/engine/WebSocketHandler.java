@@ -21,11 +21,13 @@
 
 package org.apache.qpid.proton.engine;
 
+import java.net.URI;
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 public interface WebSocketHandler
 {
-    String createUpgradeRequest();
+    String createUpgradeRequest(URI webSocketUri, String protocol, Map<String, String> additionalHeaders);
     Boolean validateUpgradeReply(ByteBuffer buffer);
     void wrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer);
     void unwrapBuffer(ByteBuffer buffer);

@@ -22,6 +22,7 @@ import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourArrayToBuff
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourBufferToArray;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
@@ -367,26 +368,16 @@ public class TransportImpl extends EndpointImpl
     }
 
     @Override
-    public WebSocket webSocket(WebSocketHandler webSocketHandler, Boolean isEnabled)
+    public WebSocket webSocket()
     {
         if (_webSocketImpl == null)
         {
             init();
-            try
-            {
-                _webSocketImpl = new WebSocketImpl(this, _remoteMaxFrameSize, webSocketHandler, isEnabled);
-                _sasl.websocket(_webSocketImpl);
-            } catch (IOException e)
-            {
-                e.printStackTrace();
-            }
+            _webSocketImpl = new WebSocketImpl(_remoteMaxFrameSize);
+            _sasl.websocket(_webSocketImpl);
             TransportWrapper transportWrapper = _webSocketImpl.wrap(_inputProcessor, _outputProcessor);
             _inputProcessor = transportWrapper;
             _outputProcessor = transportWrapper;
-        }
-        else
-        {
-            _webSocketImpl.setEnabled(isEnabled);
         }
         return _webSocketImpl;
     }
