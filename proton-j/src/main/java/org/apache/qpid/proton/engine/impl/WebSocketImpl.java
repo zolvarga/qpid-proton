@@ -52,7 +52,6 @@ public class WebSocketImpl implements WebSocket
     private String _path = "";
     private int _port = 0;
     private String _protocol = "";
-    private URI _webSocketUri = null;
     private Map<String, String> _additionalHeaders;
 
     public WebSocketImpl(int maxFrameSize)
@@ -68,14 +67,21 @@ public class WebSocketImpl implements WebSocket
         }
     }
 
-    public void configure(String host, String path, int port, Boolean isEnabled, Map<String, String> additionalHeaders, WebSocketHandler webSocketHandler)
+    public void configure(
+            String host,
+            String path,
+            int port,
+            String protocol,
+            Map<String, String> additionalHeaders,
+            WebSocketHandler webSocketHandler)
     {
         setHost(host);
         setPath(path);
         setPort(port);
+        setProtocol(protocol);
         setAdditionalHeaders(additionalHeaders);
         setWebSocketHandler(webSocketHandler);
-        setEnabled(isEnabled);
+        _isWebSocketEnabled = true;
     }
 
     public void setEnabled(Boolean isEnabled)
@@ -121,8 +127,6 @@ public class WebSocketImpl implements WebSocket
 
     private void writeUpgradeRequest()
     {
-//        _host = "iot-sdks-test.azure-devices.net";
-//        _path = "/$iothub/websocket";
         _outputBuffer.clear();
         String request = _webSocketHandler.createUpgradeRequest(_host, _path, _port, _protocol, _additionalHeaders);
 

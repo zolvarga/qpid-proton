@@ -7,7 +7,7 @@ import java.util.Map;
 
 public class WebSocketUpgradeRequest
 {
-    private final byte _colon = ':';
+    private final String _colon = ":";
     private final byte _slash = '/';
 
     private String _host = "";
@@ -33,7 +33,14 @@ public class WebSocketUpgradeRequest
      */
     public void setHost(String host)
     {
-        this._host = host;
+        if (!host.isEmpty())
+        {
+            if (host.contains(_colon))
+            {
+                host = host.substring(0, host.indexOf(_colon));
+            }
+            this._host = host;
+        }
     }
 
     /**
@@ -43,12 +50,16 @@ public class WebSocketUpgradeRequest
      */
     public void setPort(int port)
     {
-        _port = String.valueOf(port);
-        if (!_port.isEmpty())
+        _port = "";
+        if (port != 0)
         {
-            if (_port.charAt(0) != ':')
+            _port = String.valueOf(port);
+            if (!_port.isEmpty())
             {
-                _port = _colon + _port;
+                if (_port.charAt(0) != ':')
+                {
+                    _port = _colon + _port;
+                }
             }
         }
     }
@@ -77,7 +88,10 @@ public class WebSocketUpgradeRequest
      */
     public void setProtocol(String protocol)
     {
-        _protocol = protocol;
+        if (!protocol.isEmpty())
+        {
+            _protocol = protocol;
+        }
     }
 
     /**
@@ -88,14 +102,6 @@ public class WebSocketUpgradeRequest
     public void setAdditionalHeaders(Map<String, String> additionalHeaders)
     {
         _additionalHeaders = additionalHeaders;
-    }
-
-    /**
-     * Utility function to clear all additional headers
-     */
-    public void clearAdditionalHeaders()
-    {
-        _additionalHeaders.clear();
     }
 
     /**
@@ -130,8 +136,12 @@ public class WebSocketUpgradeRequest
                 .append("Sec-WebSocket-Key: ").append(webSocketKey).append(_endOfLine)
                 .append("Sec-WebSocket-Protocol: ").append(_protocol).append(_endOfLine);
 
-        if (!_host.isEmpty())
-            stringBuilder.append("Host: ").append(_host + _port);
+        stringBuilder.append("Host: ").append(_host);
+        if (!_port.isEmpty())
+        {
+            stringBuilder.append(_port);
+        }
+        stringBuilder.append(_endOfLine);
 
         if (_additionalHeaders != null) {
             for (Map.Entry<String, String> entry : _additionalHeaders.entrySet()) {
