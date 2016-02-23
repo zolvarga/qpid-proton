@@ -205,7 +205,7 @@ public class WebSocketImpl implements WebSocket
                     {
                         _inputBuffer.flip();
 
-                        WebSocketHandlerImpl.unwrapB(_inputBuffer);
+                        unwrapBuffer(_inputBuffer);
 
                         int bytes = pourAll(_inputBuffer, _underlyingInput);
                         if (bytes == Transport.END_OF_STREAM) {

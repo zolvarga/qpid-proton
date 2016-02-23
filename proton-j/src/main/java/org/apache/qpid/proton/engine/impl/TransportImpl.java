@@ -112,7 +112,7 @@ public class TransportImpl extends EndpointImpl
 
     private boolean _closeReceived;
     private Open _open;
-    private WebSocketImpl _webSocket;
+    private WebSocketImpl _webSocketImpl;
     private SaslImpl _sasl;
     private SslImpl _ssl;
     private final Ref<ProtocolTracer> _protocolTracer = new Ref(null);
@@ -341,7 +341,7 @@ public class TransportImpl extends EndpointImpl
         ByteBuffer _tempBuffer = newWriteableBuffer(outputBuffer.capacity());
         _frameWriter.readBytes(_tempBuffer);
         _tempBuffer.flip();
-        WebSocketHandlerImpl.wrapB(_tempBuffer, outputBuffer);
+        _webSocketImpl.wrapBuffer(_tempBuffer, outputBuffer);
 
         return _isCloseSent || _head_closed;
     }
@@ -369,26 +369,26 @@ public class TransportImpl extends EndpointImpl
     @Override
     public WebSocket webSocket(WebSocketHandler webSocketHandler, Boolean isEnabled)
     {
-        if (_webSocket == null)
+        if (_webSocketImpl == null)
         {
             init();
             try
             {
-                _webSocket = new WebSocketImpl(this, _remoteMaxFrameSize, webSocketHandler, isEnabled);
-                _sasl.websocket(_webSocket);
+                _webSocketImpl = new WebSocketImpl(this, _remoteMaxFrameSize, webSocketHandler, isEnabled);
+                _sasl.websocket(_webSocketImpl);
             } catch (IOException e)
             {
                 e.printStackTrace();
             }
-            TransportWrapper transportWrapper = _webSocket.wrap(_inputProcessor, _outputProcessor);
+            TransportWrapper transportWrapper = _webSocketImpl.wrap(_inputProcessor, _outputProcessor);
             _inputProcessor = transportWrapper;
             _outputProcessor = transportWrapper;
         }
         else
         {
-            _webSocket.setEnabled(isEnabled);
+            _webSocketImpl.setEnabled(isEnabled);
         }
-        return _webSocket;
+        return _webSocketImpl;
     }
 
     /**
