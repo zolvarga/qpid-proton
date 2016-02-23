@@ -27,7 +27,7 @@ import java.util.Map;
 
 public interface WebSocketHandler
 {
-    String createUpgradeRequest(URI webSocketUri, String protocol, Map<String, String> additionalHeaders);
+    String createUpgradeRequest(String hostName, String path, int port, String protocol, Map<String, String> additionalHeaders);
     Boolean validateUpgradeReply(ByteBuffer buffer);
     void wrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer);
     void unwrapBuffer(ByteBuffer buffer);

@@ -62,9 +62,9 @@ public class WebSocketHandlerImpl implements WebSocketHandler
 //    }
 
     @Override
-    public String createUpgradeRequest(URI webSocketUri, String protocol, Map<String, String> additionalHeaders)
+    public String createUpgradeRequest(String hostName, String path, int port, String protocol, Map<String, String> additionalHeaders)
     {
-        WebSocketUpgradeRequest webSocketUpgradeRequest = new WebSocketUpgradeRequest(webSocketUri, protocol, additionalHeaders);
+        WebSocketUpgradeRequest webSocketUpgradeRequest = new WebSocketUpgradeRequest(hostName, path, port, protocol, additionalHeaders);
         return webSocketUpgradeRequest.createUpgradeRequest();
     }
 

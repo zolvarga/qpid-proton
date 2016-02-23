@@ -1,11 +1,8 @@
 package org.apache.qpid.proton.engine.impl;
 
-import org.omg.CORBA.ACTIVITY_REQUIRED;
-
 import java.net.URI;
 import java.security.InvalidParameterException;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.Map;
 
 public class WebSocketUpgradeRequest
@@ -20,11 +17,11 @@ public class WebSocketUpgradeRequest
 
     private Map<String, String> _additionalHeaders = null;
 
-    public WebSocketUpgradeRequest(URI webSocketUri, String protocol, Map<String, String> additionalHeaders)
+    public WebSocketUpgradeRequest(String hostName, String path, int port, String protocol, Map<String, String> additionalHeaders)
     {
-        setHost(webSocketUri.getHost());
-        setPath(webSocketUri.getPath());
-        setPort(webSocketUri.getPort());
+        setHost(hostName);
+        setPath(path);
+        setPort(port);
         setProtocol(protocol);
         setAdditionalHeaders(additionalHeaders);
     }
