@@ -36,10 +36,18 @@ public class WebSocketHandlerImpl implements WebSocketHandler
             int webSocketPort,
             String webSocketProtocol,
             Map<String, String> additionalHeaders)
-
     {
         WebSocketUpgradeRequest webSocketUpgradeRequest = new WebSocketUpgradeRequest(hostName, webSocketPath, webSocketPort, webSocketProtocol, additionalHeaders);
         return webSocketUpgradeRequest.createUpgradeRequest();
+    }
+
+    @Override
+    public void createPong(ByteBuffer ping, ByteBuffer pong) {
+        pong.clear();
+        byte[] buffer = new byte[ping.remaining()];
+        ping.get(buffer);
+        buffer[0] = (byte) 0x8a;
+        pong.put(buffer);
     }
 
     @Override
@@ -105,30 +113,30 @@ public class WebSocketHandlerImpl implements WebSocketHandler
             webSocketFrame.write(firstByte);
 
             // Create the second byte
+            // RFC: "client MUST mask all frames that it sends to the server"
+            byte secondByte = MASKBIT_SET;
+
             // RFC: The length of the "Payload data", in bytes: if 0-125, that is the payload length.
             if (DATA_LENGTH < 126) {
-                // RFC: "client MUST mask all frames that it sends to the server"
-                byte payloadLength = (byte) (DATA_LENGTH | MASKBIT_SET);
-                webSocketFrame.write(payloadLength);
+                secondByte = (byte) (secondByte | DATA_LENGTH);
+                webSocketFrame.write(secondByte);
             }
             // RFC: If 126, the following 2 bytes interpreted as a 16-bit unsigned integer are the payload length
             else if (DATA_LENGTH <=  65535) {
                 // Create payload byte
-                byte payloadLength = (byte) (126 | MASKBIT_SET);
-                webSocketFrame.write(payloadLength);
+                secondByte = (byte) (secondByte | 126);
+                webSocketFrame.write(secondByte);
 
                 // Create extended length bytes
-                byte[] extendedLengthBytes = ByteBuffer.allocate(4).putInt(DATA_LENGTH).array();
-                webSocketFrame.write(extendedLengthBytes[2]);
-                webSocketFrame.write(extendedLengthBytes[3]);
+                webSocketFrame.write((byte) (DATA_LENGTH >>> 8));
+                webSocketFrame.write((byte) (DATA_LENGTH));
             }
             // RFC: If 127, the following 8 bytes interpreted as a 64-bit unsigned integer (the most significant bit MUST be 0) are the payload length.
-            // No need for if because if it is longer than what 8 byte length can hold... or bets are off anyway
+            // No need for "else if" because if it is longer than what 8 byte length can hold... or bets are off anyway
             else {
-                byte payloadLength = (byte) (127 | MASKBIT_SET);
-                webSocketFrame.write(payloadLength);
+                secondByte = (byte) (secondByte | 127);
+                webSocketFrame.write(secondByte);
 
-                // ByteBuffer length stored in an integer so the max length we can have is 4 bytes
                 // In this case the first four bytes are always zero
                 webSocketFrame.write(0);
                 webSocketFrame.write(0);
@@ -161,7 +169,7 @@ public class WebSocketHandlerImpl implements WebSocketHandler
     }
 
     @Override
-    public void unwrapBuffer(ByteBuffer buffer) {
+    public WebSocketMessageType unwrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer) {
         //  +---------------------------------------------------------------+
         //  0                   1                   2                   3   |
         //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 |
@@ -181,46 +189,63 @@ public class WebSocketHandlerImpl implements WebSocketHandler
         //  + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
         //  |                     Payload Data continued ...                |
         //  +---------------------------------------------------------------+
-        if (buffer.limit() > 0) {
-            byte firstByte = buffer.get();
-            byte secondByte = buffer.get();
-            byte length = (byte) (secondByte & 0x7f);
+        WebSocketMessageType retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_EMPTY;
+
+        if (srcBuffer.limit() > 1) {
+            final byte OPCODE_SET = (byte) 0x0f;
+            final byte OPCODE_BINARY = 0x2;
+            final byte OPCODE_PING = 0x9;
+            final byte MASKBIT_SET = (byte) 0x80;
+            final byte PAYLOAD_SET = (byte) 0x7f;
+
+            // Read the first byte
+            byte firstByte = srcBuffer.get();
+            // Get and check the opcode
+            byte opcode = (byte) (firstByte & OPCODE_SET);
+
+            // Read the second byte
+            byte secondByte = srcBuffer.get();
+            byte maskBit = (byte) (secondByte & MASKBIT_SET);
+            byte payloadLength = (byte) (secondByte & PAYLOAD_SET);
+
+            long finalPayloadLength = 0;
+            if (payloadLength < 126) {
+                finalPayloadLength = payloadLength;
+            } else if (payloadLength == 126) {
+                // Check if we have enough bytes to read
+                if (srcBuffer.limit() > 3) {
+                    finalPayloadLength = srcBuffer.getShort();
+                }
+                else {
+                    return WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH;
+                }
+            } else if (payloadLength == 127) {
+                // Check if we have enough bytes to read
+                if (srcBuffer.limit() > 9) {
+                    finalPayloadLength = srcBuffer.getLong();
+                }
+                else {
+                    return WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH;
+                }
+            }
+
+            // Now we have read all the headers, let's validate the message and prepare the return buffer
+            srcBuffer.compact();
+            srcBuffer.flip();
+
+            if (opcode == OPCODE_BINARY) {
+                return WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_AMQP;
+            }
+            else if (opcode == OPCODE_PING) {
+
+                return WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_PING;
+            }
+            else {
+                return WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID;
+            }
         }
 
-
-
-//        if (buffer.limit() == 0) {
-//            return;
-//        }
-//        else {
-//            byte firstByte = buffer.get();
-//            byte finBit = (byte) (firstByte & 0x80);
-//            byte opcode = (byte) (firstByte & 0x0f);
-//
-//            byte secondByte = buffer.get();
-//            byte maskBit = (byte) (secondByte & 0x80);
-//            byte length = (byte) (secondByte & 0x7f);
-//
-//            long payload_length = 0;
-//
-//            if (length < 126) {
-//                payload_length = length;
-//            } else if (length == 126) {
-//                payload_length = buffer.getShort();
-//            } else if (length == 127) {
-//                // Does work up to MAX_VALUE of long (2^63-1) after that minus values are returned.
-//                // However frames with such a high payload length are vastly unrealistic.
-//                // TODO: add Limit for WebSocket Payload Length.
-//                payload_length = buffer.getLong();
-//            }
-//            buffer.compact();
-//            buffer.flip();
-//        }
-    }
-
-    @Override
-    public void createPong(ByteBuffer srcBuffer, ByteBuffer dstBuffer) {
-
+        return retVal;
     }
 
     private static byte[] createRandomMaskingKey()

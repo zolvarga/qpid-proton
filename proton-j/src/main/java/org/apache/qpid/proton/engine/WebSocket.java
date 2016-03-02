@@ -59,7 +59,7 @@ public interface WebSocket
      *
      * @return The payload of the given WebSocket frame.
      */
-    void unwrapBuffer(ByteBuffer buffer);
+    WebSocketHandler.WebSocketMessageType unwrapBuffer(ByteBuffer buffer);
 
     /**
      * Access the current state of the layer.

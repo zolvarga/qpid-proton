@@ -107,6 +107,16 @@ public class WebSocketImpl implements WebSocket
         }
     }
 
+    private void writePong(ByteBuffer ping)
+    {
+        _webSocketHandler.createPong(ping, _outputBuffer);
+
+        if (_logger.isLoggable(Level.FINER))
+        {
+            _logger.log(Level.FINER, "Ping has been received, sending pong. Output Buffer : " + _outputBuffer);
+        }
+    }
+
     public TransportWrapper wrap(final TransportInput input, final TransportOutput output)
     {
         return new WebSocketSniffer(new WebSocketTransportWrapper(input, output), new PlainTransportWrapper(output, input))
@@ -132,10 +142,14 @@ public class WebSocketImpl implements WebSocket
     }
 
     @Override
-    public void unwrapBuffer(ByteBuffer buffer) {
+    public WebSocketHandler.WebSocketMessageType unwrapBuffer(ByteBuffer buffer) {
         if (_isWebSocketEnabled)
         {
-            _webSocketHandler.unwrapBuffer(buffer);
+            return _webSocketHandler.unwrapBuffer(buffer, null);
+        }
+        else
+        {
+            return WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_EMPTY;
         }
     }
 
@@ -222,15 +236,25 @@ public class WebSocketImpl implements WebSocket
                     {
                         _inputBuffer.flip();
 
-                        unwrapBuffer(_inputBuffer);
+                        switch (unwrapBuffer(_inputBuffer))
+                        {
+                            case WEB_SOCKET_MESSAGE_TYPE_EMPTY:
+                            case WEB_SOCKET_MESSAGE_TYPE_AMQP:
+                            case WEB_SOCKET_MESSAGE_TYPE_INVALID_MASKED:
+                            case WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH:
+                            case WEB_SOCKET_MESSAGE_TYPE_INVALID:
+                                int bytes = pourAll(_inputBuffer, _underlyingInput);
+                                if (bytes == Transport.END_OF_STREAM) {
+                                    _tail_closed = true;
+                                }
+                                _inputBuffer.compact();
 
-                        int bytes = pourAll(_inputBuffer, _underlyingInput);
-                        if (bytes == Transport.END_OF_STREAM) {
-                            _tail_closed = true;
+                                _underlyingInput.process();
+                                break;
+                            case WEB_SOCKET_MESSAGE_TYPE_PING:
+                                writePong(_inputBuffer);
+                                break;
                         }
-                        _inputBuffer.compact();
-                        
-                        _underlyingInput.process();
                     }
                     break;
                 case PN_WS_CLOSED:
