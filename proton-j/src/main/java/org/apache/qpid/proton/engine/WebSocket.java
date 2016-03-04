@@ -51,8 +51,6 @@ public interface WebSocket
 
     /**
      * Add WebSocket frame to send the given buffer
-     *
-     * @return The WebSocket frame to send.
      */
     void wrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer);
 

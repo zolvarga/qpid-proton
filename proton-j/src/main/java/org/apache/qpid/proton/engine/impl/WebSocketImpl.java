@@ -207,12 +207,11 @@ public class WebSocketImpl implements WebSocket
                 case PN_WS_CONNECTED_FLOW:
                 case PN_WS_CONNECTED_PONG:
                     Boolean isRepeatedUpgradeAccept = false;
-                    int size = _inputBuffer.remaining();
-                    if (size > 0)
+                    if (_inputBuffer.remaining() > 4)
                     {
                         byte[] data = new byte[_inputBuffer.remaining()];
                         _inputBuffer.get(data);
-                        if ((data[0] == 72) && (data[1] == 84))
+                        if ((data[0] == 72) && (data[1] == 84) && (data[2] == 84) && (data[3] == 80))
                         {
                             _inputBuffer.compact();
                             isRepeatedUpgradeAccept = true;

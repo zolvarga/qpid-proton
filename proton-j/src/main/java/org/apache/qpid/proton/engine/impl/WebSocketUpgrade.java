@@ -6,8 +6,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
-public class WebSocketUpgradeRequest
+public class WebSocketUpgrade
 {
+    public static final String RFC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
     private final byte _colon = ':';
     private final byte _slash = '/';
 
@@ -19,7 +20,7 @@ public class WebSocketUpgradeRequest
 
     private Map<String, String> _additionalHeaders = null;
 
-    public WebSocketUpgradeRequest(
+    public WebSocketUpgrade(
             String hostName,
             String webSocketPath,
             int webSocketPort,
@@ -50,15 +51,15 @@ public class WebSocketUpgradeRequest
      */
     public void setPort(int port)
     {
-        _port = "";
+        this._port = "";
         if (port != 0)
         {
-            _port = String.valueOf(port);
-            if (!_port.isEmpty())
+            this._port = String.valueOf(port);
+            if (!this._port.isEmpty())
             {
-                if (_port.charAt(0) != ':')
+                if (this._port.charAt(0) != ':')
                 {
-                    _port = _colon + _port;
+                    this._port = this._colon + this._port;
                 }
             }
         }
@@ -71,12 +72,12 @@ public class WebSocketUpgradeRequest
      */
     public void setPath(String path)
     {
-        _path = path;
-        if (!_path.isEmpty())
+        this._path = path;
+        if (!this._path.isEmpty())
         {
-            if (_path.charAt(0) != _slash)
+            if (this._path.charAt(0) != this._slash)
             {
-                _path = _slash + _path;
+                this._path = this._slash + this._path;
             }
         }
     }
@@ -88,7 +89,7 @@ public class WebSocketUpgradeRequest
      */
     public void setProtocol(String protocol)
     {
-        _protocol = protocol;
+        this._protocol = protocol;
     }
 
     /**
@@ -124,24 +125,24 @@ public class WebSocketUpgradeRequest
 
     public String createUpgradeRequest()
     {
-        if (_host.isEmpty())
+        if (this._host.isEmpty())
             throw new InvalidParameterException("host header has no value");
 
-        if (_protocol.isEmpty())
+        if (this._protocol.isEmpty())
             throw new InvalidParameterException("protocol header has no value");
 
-        _webSocketKey = createWebSocketKey();
+        this._webSocketKey = createWebSocketKey();
 
         String _endOfLine = "\r\n";
         StringBuilder stringBuilder = new StringBuilder()
-                .append("GET ").append(_path).append(" HTTP/1.1").append(_endOfLine)
+                .append("GET ").append(this._path).append(" HTTP/1.1").append(_endOfLine)
                 .append("Connection: Upgrade").append(_endOfLine)
                 .append("Upgrade: websocket").append(_endOfLine)
                 .append("Sec-WebSocket-Version: 13").append(_endOfLine)
-                .append("Sec-WebSocket-Key: ").append(_webSocketKey).append(_endOfLine)
-                .append("Sec-WebSocket-Protocol: ").append(_protocol).append(_endOfLine);
+                .append("Sec-WebSocket-Key: ").append(this._webSocketKey).append(_endOfLine)
+                .append("Sec-WebSocket-Protocol: ").append(this._protocol).append(_endOfLine);
 
-        stringBuilder.append("Host: ").append(_host + _port).append(_endOfLine);
+        stringBuilder.append("Host: ").append(this._host + this._port).append(_endOfLine);
 
         if (_additionalHeaders != null)
         {
@@ -160,23 +161,16 @@ public class WebSocketUpgradeRequest
     {
         String httpString = new String(responseBytes, StandardCharsets.UTF_8);
 
-        List<String> httpLines = new ArrayList<String>();
-        Scanner scanner = new Scanner(httpString);
-        while (scanner.hasNextLine())
-        {
-            httpLines.add(scanner.nextLine());
-        }
-        scanner.close();
-
         Boolean isStatusLineOk = false;
         Boolean isUpgradeHeaderOk = false;
         Boolean isConnectionHeaderOk = false;
         Boolean isProtocolHeaderOk = false;
         Boolean isAcceptHeaderOk = false;
 
-        for (Iterator<String> iterator = httpLines.iterator(); iterator.hasNext(); )
+        Scanner scanner = new Scanner(httpString);
+        while (scanner.hasNextLine())
         {
-            String line = iterator.next();
+            String line = scanner.nextLine();
 
             if ((line.toLowerCase().contains("http/1.1")) && (line.contains("101")) && (line.toLowerCase().contains("switching protocols")))
             {
@@ -206,10 +200,10 @@ public class WebSocketUpgradeRequest
                     messageDigest = MessageDigest.getInstance("SHA-1");
                 } catch (NoSuchAlgorithmException e)
                 {
-                    e.printStackTrace();
+                    break;
                 }
 
-                String expectedKey = Base64.getEncoder().encodeToString(messageDigest.digest((_webSocketKey + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").getBytes()));
+                String expectedKey = Base64.getEncoder().encodeToString(messageDigest.digest((this._webSocketKey + RFC_GUID).getBytes()));
 
                 if (line.contains(expectedKey))
                 {
@@ -218,6 +212,7 @@ public class WebSocketUpgradeRequest
                 continue;
             }
         }
+        scanner.close();
 
         if ((isStatusLineOk) && (isUpgradeHeaderOk) && (isConnectionHeaderOk) && (isProtocolHeaderOk) && (isAcceptHeaderOk))
         {

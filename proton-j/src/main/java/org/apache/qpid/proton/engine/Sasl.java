@@ -20,6 +20,7 @@ package org.apache.qpid.proton.engine;
  *
 */
 
+
 public interface Sasl
 {
     public enum SaslState
