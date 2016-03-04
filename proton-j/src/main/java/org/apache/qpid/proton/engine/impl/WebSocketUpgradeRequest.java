@@ -1,8 +1,10 @@
 package org.apache.qpid.proton.engine.impl;
 
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidParameterException;
-import java.util.Base64;
-import java.util.Map;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.*;
 
 public class WebSocketUpgradeRequest
 {
@@ -13,6 +15,7 @@ public class WebSocketUpgradeRequest
     private String _path = "";
     private String _port = "";
     private String _protocol = "AMQPWSB10";
+    private String _webSocketKey = "";
 
     private Map<String, String> _additionalHeaders = null;
 
@@ -114,9 +117,9 @@ public class WebSocketUpgradeRequest
         byte[] key = new byte[16];
         for (int i = 0; i < 16; i++)
         {
-            key[i] = (byte) (int) (Math.random() * 255);
+            key[i] = (byte) (int) (Math.random() * 256);
         }
-        return String.valueOf(Base64.getEncoder().encode(key));
+        return Base64.getEncoder().encodeToString(key).trim();
     }
 
     public String createUpgradeRequest()
@@ -127,7 +130,7 @@ public class WebSocketUpgradeRequest
         if (_protocol.isEmpty())
             throw new InvalidParameterException("protocol header has no value");
 
-        String webSocketKey = createWebSocketKey();
+        _webSocketKey = createWebSocketKey();
 
         String _endOfLine = "\r\n";
         StringBuilder stringBuilder = new StringBuilder()
@@ -135,7 +138,7 @@ public class WebSocketUpgradeRequest
                 .append("Connection: Upgrade").append(_endOfLine)
                 .append("Upgrade: websocket").append(_endOfLine)
                 .append("Sec-WebSocket-Version: 13").append(_endOfLine)
-                .append("Sec-WebSocket-Key: ").append(webSocketKey).append(_endOfLine)
+                .append("Sec-WebSocket-Key: ").append(_webSocketKey).append(_endOfLine)
                 .append("Sec-WebSocket-Protocol: ").append(_protocol).append(_endOfLine);
 
         stringBuilder.append("Host: ").append(_host + _port).append(_endOfLine);
@@ -151,5 +154,78 @@ public class WebSocketUpgradeRequest
         stringBuilder.append(_endOfLine);
 
         return stringBuilder.toString();
+    }
+
+    public Boolean validateUpgradeReply(byte[] responseBytes)
+    {
+        String httpString = new String(responseBytes, StandardCharsets.UTF_8);
+
+        List<String> httpLines = new ArrayList<String>();
+        Scanner scanner = new Scanner(httpString);
+        while (scanner.hasNextLine())
+        {
+            httpLines.add(scanner.nextLine());
+        }
+        scanner.close();
+
+        Boolean isStatusLineOk = false;
+        Boolean isUpgradeHeaderOk = false;
+        Boolean isConnectionHeaderOk = false;
+        Boolean isProtocolHeaderOk = false;
+        Boolean isAcceptHeaderOk = false;
+
+        for (Iterator<String> iterator = httpLines.iterator(); iterator.hasNext(); )
+        {
+            String line = iterator.next();
+
+            if ((line.toLowerCase().contains("http/1.1")) && (line.contains("101")) && (line.toLowerCase().contains("switching protocols")))
+            {
+                isStatusLineOk = true;
+                continue;
+            }
+            if ((line.toLowerCase().contains("upgrade")) && (line.toLowerCase().contains("websocket")))
+            {
+                isUpgradeHeaderOk = true;
+                continue;
+            }
+            if ((line.toLowerCase().contains("connection")) && (line.toLowerCase().contains("upgrade")))
+            {
+                isConnectionHeaderOk = true;
+                continue;
+            }
+            if (line.toLowerCase().contains("sec-websocket-protocol") && (line.toLowerCase().contains("amqpwsb10")))
+            {
+                isProtocolHeaderOk = true;
+                continue;
+            }
+            if (line.toLowerCase().contains("sec-websocket-accept"))
+            {
+                MessageDigest messageDigest = null;
+                try
+                {
+                    messageDigest = MessageDigest.getInstance("SHA-1");
+                } catch (NoSuchAlgorithmException e)
+                {
+                    e.printStackTrace();
+                }
+
+                String expectedKey = Base64.getEncoder().encodeToString(messageDigest.digest((_webSocketKey + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").getBytes()));
+
+                if (line.contains(expectedKey))
+                {
+                    isAcceptHeaderOk = true;
+                }
+                continue;
+            }
+        }
+
+        if ((isStatusLineOk) && (isUpgradeHeaderOk) && (isConnectionHeaderOk) && (isProtocolHeaderOk) && (isAcceptHeaderOk))
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 }

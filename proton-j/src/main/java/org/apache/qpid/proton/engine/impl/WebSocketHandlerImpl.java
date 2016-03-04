@@ -23,12 +23,14 @@ import org.apache.qpid.proton.engine.WebSocketHandler;
 
 import java.io.*;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 public class WebSocketHandlerImpl implements WebSocketHandler
 {
+    private WebSocketUpgradeRequest _webSocketUpgradeRequest = null;
+
     @Override
     public String createUpgradeRequest(
             String hostName,
@@ -37,8 +39,8 @@ public class WebSocketHandlerImpl implements WebSocketHandler
             String webSocketProtocol,
             Map<String, String> additionalHeaders)
     {
-        WebSocketUpgradeRequest webSocketUpgradeRequest = new WebSocketUpgradeRequest(hostName, webSocketPath, webSocketPort, webSocketProtocol, additionalHeaders);
-        return webSocketUpgradeRequest.createUpgradeRequest();
+        _webSocketUpgradeRequest = new WebSocketUpgradeRequest(hostName, webSocketPath, webSocketPort, webSocketProtocol, additionalHeaders);
+        return _webSocketUpgradeRequest.createUpgradeRequest();
     }
 
     @Override
@@ -52,15 +54,21 @@ public class WebSocketHandlerImpl implements WebSocketHandler
 
     @Override
     public Boolean validateUpgradeReply(ByteBuffer buffer) {
-        int size = buffer.remaining();
-        if (size > 0)
+        Boolean retVal = false;
+        if (_webSocketUpgradeRequest != null)
         {
-            byte[] data = new byte[buffer.remaining()];
-            buffer.get(data);
-            buffer.compact();
-            return true;
+            int size = buffer.remaining();
+            if (size > 0)
+            {
+                byte[] data = new byte[buffer.remaining()];
+                buffer.get(data);
+                buffer.compact();
+
+                retVal = _webSocketUpgradeRequest.validateUpgradeReply(data);
+                _webSocketUpgradeRequest = null;
+            }
         }
-        return false;
+        return retVal;
     }
 
     @Override
