@@ -125,20 +125,20 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
     private void writeSaslOutput()
     {
         process();
-//        _frameWriter.readBytes(_outputBuffer);
+        _frameWriter.readBytes(_outputBuffer);
 
-        ByteBuffer _tempBuffer = newWriteableBuffer(_outputBuffer.capacity());
-        _frameWriter.readBytes(_tempBuffer);
-        _tempBuffer.flip();
-        try
-        {
-            WebSocketTools.printBuffer("SASLImpl is sending", _tempBuffer);
-        } catch (IOException e)
-        {
-            e.printStackTrace();
-        }
-
-        _webSocketImpl.wrapBuffer(_tempBuffer, _outputBuffer);
+//        ByteBuffer _tempBuffer = newWriteableBuffer(_outputBuffer.capacity());
+//        _frameWriter.readBytes(_tempBuffer);
+//        _tempBuffer.flip();
+//        try
+//        {
+//            WebSocketTools.printBuffer("SASLImpl is sending", _tempBuffer);
+//        } catch (IOException e)
+//        {
+//            e.printStackTrace();
+//        }
+//
+//        _webSocketImpl.wrapBuffer(_tempBuffer, _outputBuffer);
 
         if(_logger.isLoggable(Level.FINER))
         {

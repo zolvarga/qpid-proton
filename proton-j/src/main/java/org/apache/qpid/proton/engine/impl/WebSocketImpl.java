@@ -43,6 +43,7 @@ public class WebSocketImpl implements WebSocket
     private boolean _head_closed = false;
     private final ByteBuffer _outputBuffer;
     private int _underlyingOutputSize = 0;
+    private int _wrappedOutputSize = 0;
     private ByteBuffer _tempBuffer;
 
     private WebSocketHandler _webSocketHandler;
@@ -417,9 +418,13 @@ public class WebSocketImpl implements WebSocket
                     case PN_WS_CONNECTED:
                         _underlyingOutputSize = _underlyingOutput.pending();
                         _outputBuffer.clear();
-                        _outputBuffer.put(_underlyingOutput.head());
+                        wrapBuffer(_underlyingOutput.head(), _outputBuffer);
+                        _wrappedOutputSize = _outputBuffer.position() - _underlyingOutputSize;
+
+//                        _outputBuffer.clear();
+//                        _outputBuffer.put(_underlyingOutput.head());
                         _head.limit(_outputBuffer.position());
-                        return _underlyingOutputSize;
+                        return _outputBuffer.position();
                     case PN_WS_FAILED:
                         return Transport.END_OF_STREAM;
                     default:
@@ -483,7 +488,8 @@ public class WebSocketImpl implements WebSocket
                             _outputBuffer.compact();
                             _head.position(0);
                             _head.limit(_outputBuffer.position());
-                            _underlyingOutput.pop(bytes);
+                            _underlyingOutput.pop(bytes - _wrappedOutputSize);
+                            _wrappedOutputSize = 0;
                         }
                         else
                         {
