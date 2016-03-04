@@ -42,6 +42,8 @@ public class WebSocketImpl implements WebSocket
     private final ByteBuffer _inputBuffer;
     private boolean _head_closed = false;
     private final ByteBuffer _outputBuffer;
+    private ByteBuffer _pending;
+
     private int _underlyingOutputSize = 0;
     private int _webSocketHeaderSize = 0;
 
@@ -158,37 +160,23 @@ public class WebSocketImpl implements WebSocket
     @Override
     public WebSocketState getState()
     {
-        // TODO: Implement function
         return _state;
-    }
-
-    @Override
-    public int pending()
-    {
-        // TODO: Implement function
-        return 0;
-    }
-
-    @Override
-    final public int recv(byte[] bytes, int offset, int size)
-    {
-        // TODO: Implement function
-        return size;
-    }
-
-    @Override
-    final public int send(byte[] bytes, int offset, int size)
-    {
-        // TODO: Implement function
-        return size;
     }
 
     @Override
     public String toString()
     {
-        // TODO: Implement function
-        return "";
-    }
+        StringBuilder builder = new StringBuilder();
+        builder
+                .append("WebSocketImpl [isWebSocketEnabled=").append(_isWebSocketEnabled)
+                .append(", state=").append(_state)
+                .append(", protocol=").append(_protocol)
+                .append(", host=").append(_host)
+                .append(", path=").append(_path)
+                .append(", port=").append(_port)
+                .append("]");
+
+        return builder.toString();    }
 
     private class WebSocketTransportWrapper implements TransportWrapper
     {
