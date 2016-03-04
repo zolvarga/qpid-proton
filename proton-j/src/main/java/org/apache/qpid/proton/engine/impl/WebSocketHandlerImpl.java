@@ -84,7 +84,7 @@ public class WebSocketHandlerImpl implements WebSocketHandler
         //  + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
         //  |                     Payload Data continued ...                |
         //  +---------------------------------------------------------------+
-        if (srcBuffer.limit() > 0)
+        if ((srcBuffer != null) && (dstBuffer != null) && srcBuffer.remaining() > 0)
         {
             // We always send final WebSocket frame
             // RFC: Indicates that this is the final fragment in a message.
@@ -164,6 +164,7 @@ public class WebSocketHandlerImpl implements WebSocketHandler
             }
 
             // Copy frame to destination buffer
+            dstBuffer.clear();
             dstBuffer.put(webSocketFrame.toByteArray());
         }
     }

@@ -17,12 +17,9 @@
 
 package org.apache.qpid.proton.engine.impl;
 
-import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.newWriteableBuffer;
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourArrayToBuffer;
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourBufferToArray;
 
-import java.io.IOException;
-import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
@@ -51,7 +48,6 @@ import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Event;
-import org.apache.qpid.proton.engine.WebSocketHandler;
 import org.apache.qpid.proton.engine.ProtonJTransport;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Ssl;
@@ -340,11 +336,6 @@ public class TransportImpl extends EndpointImpl
 
         _frameWriter.readBytes(outputBuffer);
 
-//        ByteBuffer _tempBuffer = newWriteableBuffer(outputBuffer.capacity());
-//        _frameWriter.readBytes(_tempBuffer);
-//        _tempBuffer.flip();
-//        _webSocketImpl.wrapBuffer(_tempBuffer, outputBuffer);
-
         return _isCloseSent || _head_closed;
     }
 
@@ -375,7 +366,6 @@ public class TransportImpl extends EndpointImpl
         {
             init();
             _webSocketImpl = new WebSocketImpl(_remoteMaxFrameSize);
-            _sasl.websocket(_webSocketImpl);
             TransportWrapper transportWrapper = _webSocketImpl.wrap(_inputProcessor, _outputProcessor);
             _inputProcessor = transportWrapper;
             _outputProcessor = transportWrapper;
