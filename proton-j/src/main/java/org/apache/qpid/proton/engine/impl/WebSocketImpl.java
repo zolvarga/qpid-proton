@@ -42,6 +42,8 @@ public class WebSocketImpl implements WebSocket
     private final ByteBuffer _inputBuffer;
     private boolean _head_closed = false;
     private final ByteBuffer _outputBuffer;
+    private int _underlyingOutputSize = 0;
+    private ByteBuffer _tempBuffer;
 
     private WebSocketHandler _webSocketHandler;
     private Boolean _isWebSocketEnabled = false;
@@ -57,6 +59,7 @@ public class WebSocketImpl implements WebSocket
     {
         _inputBuffer = newWriteableBuffer(maxFrameSize);
         _outputBuffer = newWriteableBuffer(maxFrameSize);
+        _tempBuffer = newWriteableBuffer(maxFrameSize);
         _isWebSocketEnabled = false;
         try {
             WebSocketTools.clearLogFile();
@@ -412,7 +415,11 @@ public class WebSocketImpl implements WebSocket
                             return _outputBuffer.position();
                         }
                     case PN_WS_CONNECTED:
-                        return _underlyingOutput.pending();
+                        _underlyingOutputSize = _underlyingOutput.pending();
+                        _outputBuffer.clear();
+                        _outputBuffer.put(_underlyingOutput.head());
+                        _head.limit(_outputBuffer.position());
+                        return _underlyingOutputSize;
                     case PN_WS_FAILED:
                         return Transport.END_OF_STREAM;
                     default:
@@ -432,9 +439,8 @@ public class WebSocketImpl implements WebSocket
             {
                 switch (_state) {
                     case PN_WS_CONNECTING:
-                        pending();
-                        return _head;
                     case PN_WS_CONNECTED:
+                        return _head;
                     case PN_WS_NOT_STARTED:
                     case PN_WS_CLOSED:
                     case PN_WS_FAILED:
@@ -453,17 +459,42 @@ public class WebSocketImpl implements WebSocket
         {
             if (_isWebSocketEnabled)
             {
-                if (_outputBuffer.position() != 0)
+                switch (_state)
                 {
-                    _outputBuffer.flip();
-                    _outputBuffer.position(bytes);
-                    _outputBuffer.compact();
-                    _head.position(0);
-                    _head.limit(_outputBuffer.position());
-                }
-                else
-                {
-                    _underlyingOutput.pop(bytes);
+                    case PN_WS_CONNECTING:
+                        if (_outputBuffer.position() != 0)
+                        {
+                            _outputBuffer.flip();
+                            _outputBuffer.position(bytes);
+                            _outputBuffer.compact();
+                            _head.position(0);
+                            _head.limit(_outputBuffer.position());
+                        }
+                        else
+                        {
+                            _underlyingOutput.pop(bytes);
+                        }
+                        break;
+                    case PN_WS_CONNECTED:
+                        if (_outputBuffer.position() != 0)
+                        {
+                            _outputBuffer.flip();
+                            _outputBuffer.position(bytes);
+                            _outputBuffer.compact();
+                            _head.position(0);
+                            _head.limit(_outputBuffer.position());
+                            _underlyingOutput.pop(bytes);
+                        }
+                        else
+                        {
+                            _underlyingOutput.pop(bytes);
+                        }
+                        break;
+                    case PN_WS_NOT_STARTED:
+                    case PN_WS_CLOSED:
+                    case PN_WS_FAILED:
+                        _underlyingOutput.pop(bytes);
+                        break;
                 }
             }
             else

@@ -125,6 +125,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
     private void writeSaslOutput()
     {
         process();
+//        _frameWriter.readBytes(_outputBuffer);
 
         ByteBuffer _tempBuffer = newWriteableBuffer(_outputBuffer.capacity());
         _frameWriter.readBytes(_tempBuffer);

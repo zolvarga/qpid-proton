@@ -338,6 +338,7 @@ public class TransportImpl extends EndpointImpl
         processEnd();
         processClose();
 
+//        _frameWriter.readBytes(outputBuffer);
 
         ByteBuffer _tempBuffer = newWriteableBuffer(outputBuffer.capacity());
         _frameWriter.readBytes(_tempBuffer);
