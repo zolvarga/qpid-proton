@@ -42,7 +42,7 @@ public class WebSocketImpl implements WebSocket
     private final ByteBuffer _inputBuffer;
     private boolean _head_closed = false;
     private final ByteBuffer _outputBuffer;
-    private ByteBuffer _pending;
+    private ByteBuffer _pingBuffer;
 
     private int _underlyingOutputSize = 0;
     private int _webSocketHeaderSize = 0;
@@ -61,6 +61,7 @@ public class WebSocketImpl implements WebSocket
     {
         _inputBuffer = newWriteableBuffer(maxFrameSize);
         _outputBuffer = newWriteableBuffer(maxFrameSize);
+        _pingBuffer = newWriteableBuffer(maxFrameSize);
         _isWebSocketEnabled = false;
         try {
             WebSocketTools.clearLogFile();
@@ -111,9 +112,9 @@ public class WebSocketImpl implements WebSocket
         }
     }
 
-    private void writePong(ByteBuffer ping)
+    private void writePong()
     {
-        _webSocketHandler.createPong(ping, _outputBuffer);
+        _webSocketHandler.createPong(_pingBuffer, _outputBuffer);
 
         if (_logger.isLoggable(Level.FINER))
         {
@@ -200,7 +201,7 @@ public class WebSocketImpl implements WebSocket
                 case PN_WS_CONNECTING:
                     if (_webSocketHandler.validateUpgradeReply(_inputBuffer))
                     {
-                        _state = WebSocketState.PN_WS_CONNECTED;
+                        _state = WebSocketState.PN_WS_CONNECTED_FLOW;
                     }
 
                     if (_logger.isLoggable(Level.FINER))
@@ -208,7 +209,8 @@ public class WebSocketImpl implements WebSocket
                         _logger.log(Level.FINER, WebSocketImpl.this + " about to call plain input");
                     }
                     break;
-                case PN_WS_CONNECTED:
+                case PN_WS_CONNECTED_FLOW:
+                case PN_WS_CONNECTED_PONG:
                     Boolean isRepeatedUpgradeAccept = false;
                     int size = _inputBuffer.remaining();
                     if (size > 0)
@@ -242,7 +244,8 @@ public class WebSocketImpl implements WebSocket
                                 _underlyingInput.process();
                                 break;
                             case WEB_SOCKET_MESSAGE_TYPE_PING:
-                                writePong(_inputBuffer);
+                                _pingBuffer.put(_inputBuffer);
+                                _state = WebSocketState.PN_WS_CONNECTED_PONG;
                                 break;
                         }
                     }
@@ -330,7 +333,7 @@ public class WebSocketImpl implements WebSocket
                             _inputBuffer.compact();
                         }
                         break;
-                    case PN_WS_CONNECTED:
+                    case PN_WS_CONNECTED_FLOW:
                         processInput();
                         break;
                     case PN_WS_FAILED:
@@ -401,7 +404,7 @@ public class WebSocketImpl implements WebSocket
                         {
                             return _outputBuffer.position();
                         }
-                    case PN_WS_CONNECTED:
+                    case PN_WS_CONNECTED_FLOW:
                         _underlyingOutputSize = _underlyingOutput.pending();
 
                         wrapBuffer(_underlyingOutput.head(), _outputBuffer);
@@ -411,6 +414,22 @@ public class WebSocketImpl implements WebSocket
                         _head.limit(_outputBuffer.position());
 
                         return _outputBuffer.position();
+                    case PN_WS_CONNECTED_PONG:
+                        _state = WebSocketState.PN_WS_CONNECTED_FLOW;
+
+                        writePong();
+
+                        _head.limit(_outputBuffer.position());
+
+                        if (_head_closed)
+                        {
+                            _state = WebSocketState.PN_WS_FAILED;
+                            return Transport.END_OF_STREAM;
+                        }
+                        else
+                        {
+                            return _outputBuffer.position();
+                        }
                     case PN_WS_FAILED:
                         return Transport.END_OF_STREAM;
                     default:
@@ -430,7 +449,8 @@ public class WebSocketImpl implements WebSocket
             {
                 switch (_state) {
                     case PN_WS_CONNECTING:
-                    case PN_WS_CONNECTED:
+                    case PN_WS_CONNECTED_FLOW:
+                    case PN_WS_CONNECTED_PONG:
                         return _head;
                     case PN_WS_NOT_STARTED:
                     case PN_WS_CLOSED:
@@ -466,7 +486,8 @@ public class WebSocketImpl implements WebSocket
                             _underlyingOutput.pop(bytes);
                         }
                         break;
-                    case PN_WS_CONNECTED:
+                    case PN_WS_CONNECTED_FLOW:
+                    case PN_WS_CONNECTED_PONG:
                         if (_outputBuffer.position() != 0)
                         {
                             _outputBuffer.flip();

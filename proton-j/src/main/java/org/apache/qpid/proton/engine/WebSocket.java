@@ -38,8 +38,10 @@ public interface WebSocket
         PN_WS_NOT_STARTED,
         /** Pending connection */
         PN_WS_CONNECTING,
-        /** Connected */
-        PN_WS_CONNECTED,
+        /** Connected and messages flow */
+        PN_WS_CONNECTED_FLOW,
+        /** Connected and ping-pong */
+        PN_WS_CONNECTED_PONG,
         /** Connection closed */
         PN_WS_CLOSED,
         /** Connection failed */
