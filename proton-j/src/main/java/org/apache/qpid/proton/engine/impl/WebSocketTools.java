@@ -3,7 +3,6 @@ package org.apache.qpid.proton.engine.impl;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.nio.ByteBuffer;
 
 /**
@@ -45,22 +44,22 @@ public class WebSocketTools
         }
         return new String(hexChars);
     }
-
-    public static void clearLogFile() throws IOException
-    {
-        PrintWriter printWriter = new PrintWriter(new FileWriter(new File("E:/Documents/java-proton-j-websocket/log.txt"), false));
-        printWriter.close();
-    }
+//
+//    public static void clearLogFile() throws IOException
+//    {
+//        PrintWriter printWriter = new PrintWriter(new FileWriter(new File("E:/Documents/java-proton-j-websocket/log.txt"), false));
+//        printWriter.close();
+//    }
 
     public static void printBuffer(String title, ByteBuffer buffer) throws IOException
     {
-        PrintWriter printWriter = new PrintWriter(new FileWriter(new File("E:/Documents/java-proton-j-websocket/log.txt"), true));
+//        PrintWriter printWriter = new PrintWriter(new FileWriter(new File("E:/Documents/java-proton-j-websocket/log.txt"), true));
 
         int max = 10;
         if ((buffer.limit() > 0) && (buffer.limit() < buffer.capacity()))
         {
             System.out.println(title + " : ");
-            printWriter.println(title + " : ");
+//            printWriter.println(title + " : ");
 
             int size = buffer.limit();
             int pos = buffer.position();
@@ -73,18 +72,18 @@ public class WebSocketTools
             //            }
             //            printWriter.println(WebSocketHandlerImpl.bytesToHex(bytes, max));
             System.out.println("size=" + bytes.length);
-            printWriter.println("size=" + bytes.length);
+//            printWriter.println("size=" + bytes.length);
 
             for (int i = 0; i < bytes.length; i++)
             {
                 System.out.print((char) bytes[i]);
-                printWriter.write((char) bytes[i]);
+//                printWriter.write((char) bytes[i]);
             }
             System.out.println();
-            printWriter.println();
+//            printWriter.println();
             System.out.println("***************************************************");
-            printWriter.println("***************************************************");
-            printWriter.close();
+//            printWriter.println("***************************************************");
+//            printWriter.close();
 
             buffer.position(pos);
         }

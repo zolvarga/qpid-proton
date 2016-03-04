@@ -63,11 +63,6 @@ public class WebSocketImpl implements WebSocket
         _outputBuffer = newWriteableBuffer(maxFrameSize);
         _pingBuffer = newWriteableBuffer(maxFrameSize);
         _isWebSocketEnabled = false;
-        try {
-            WebSocketTools.clearLogFile();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     public void configure(
