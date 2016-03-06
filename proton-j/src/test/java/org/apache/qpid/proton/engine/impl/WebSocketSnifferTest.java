@@ -19,6 +19,7 @@
  */
 package org.apache.qpid.proton.engine.impl;
 
+import org.apache.qpid.proton.engine.WebSocketHeader;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;

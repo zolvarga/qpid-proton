@@ -21,6 +21,8 @@
 
 package org.apache.qpid.proton.engine.impl;
 
+import org.apache.qpid.proton.engine.WebSocketHeader;
+
 public class WebSocketSniffer extends HandshakeSniffingTransportWrapper<TransportWrapper, TransportWrapper>
 {
     public WebSocketSniffer(TransportWrapper webSocket, TransportWrapper other) {
