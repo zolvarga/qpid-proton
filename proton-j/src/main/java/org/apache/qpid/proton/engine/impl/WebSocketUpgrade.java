@@ -9,13 +9,13 @@ import java.util.*;
 public class WebSocketUpgrade
 {
     public static final String RFC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-    private final byte _colon = ':';
-    private final byte _slash = '/';
+    private final char _colon = ':';
+    private final char _slash = '/';
 
     private String _host = "";
     private String _path = "";
     private String _port = "";
-    private String _protocol = "AMQPWSB10";
+    private String _protocol = "";
     private String _webSocketKey = "";
 
     private Map<String, String> _additionalHeaders = null;
@@ -51,35 +51,23 @@ public class WebSocketUpgrade
      */
     public void setPort(int port)
     {
-        this._port = "";
-        if (port != 0)
-        {
-            this._port = String.valueOf(port);
-            if (!this._port.isEmpty())
-            {
-                if (this._port.charAt(0) != ':')
-                {
-                    this._port = this._colon + this._port;
-                }
-            }
-        }
+        this._port = String.valueOf(port);
     }
 
     /**
      * Set path value in handshake
+     * Removes all the leading slash characters
      *
      * @param path The path field value.
      */
     public void setPath(String path)
     {
-        this._path = path;
-        if (!this._path.isEmpty())
+        int i = 0;
+        while (path.toCharArray()[i] == this._slash)
         {
-            if (this._path.charAt(0) != this._slash)
-            {
-                this._path = this._slash + this._path;
-            }
+            i++;
         }
+        this._path = path.substring(i);
     }
 
     /**
@@ -135,14 +123,14 @@ public class WebSocketUpgrade
 
         String _endOfLine = "\r\n";
         StringBuilder stringBuilder = new StringBuilder()
-                .append("GET ").append(this._path).append(" HTTP/1.1").append(_endOfLine)
+                .append("GET ").append(this._slash).append(this._path).append(" HTTP/1.1").append(_endOfLine)
                 .append("Connection: Upgrade").append(_endOfLine)
                 .append("Upgrade: websocket").append(_endOfLine)
                 .append("Sec-WebSocket-Version: 13").append(_endOfLine)
                 .append("Sec-WebSocket-Key: ").append(this._webSocketKey).append(_endOfLine)
                 .append("Sec-WebSocket-Protocol: ").append(this._protocol).append(_endOfLine);
 
-        stringBuilder.append("Host: ").append(this._host + this._port).append(_endOfLine);
+        stringBuilder.append("Host: ").append(this._host + this._colon + this._port).append(_endOfLine);
 
         if (_additionalHeaders != null)
         {
@@ -187,7 +175,7 @@ public class WebSocketUpgrade
                 isConnectionHeaderOk = true;
                 continue;
             }
-            if (line.toLowerCase().contains("sec-websocket-protocol") && (line.toLowerCase().contains("amqpwsb10")))
+            if (line.toLowerCase().contains("sec-websocket-protocol") && (line.toLowerCase().contains(this._protocol)))
             {
                 isProtocolHeaderOk = true;
                 continue;
@@ -222,5 +210,31 @@ public class WebSocketUpgrade
         {
             return false;
         }
+    }
+
+    @Override
+    public String toString()
+    {
+        StringBuilder builder = new StringBuilder();
+        builder
+                .append("WebSocketImpl [host=").append(_host)
+                .append(", path=").append(_path)
+                .append(", port=").append(_port)
+                .append(", protocol=").append(_protocol)
+                .append(", webSocketKey=").append(_webSocketKey);
+
+        if ((_additionalHeaders != null) && (!_additionalHeaders.isEmpty()))
+        {
+            builder.append(", additionalHeaders=");
+            for (Map.Entry<String, String> entry : _additionalHeaders.entrySet())
+            {
+                builder.append(entry.getKey() + ":" + entry.getValue()).append(", ");
+            }
+            int lastIndex = builder.lastIndexOf(", ");
+            builder.delete(lastIndex, lastIndex + 2);
+        }
+        builder.append("]");
+
+        return builder.toString();
     }
 }
