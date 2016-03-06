@@ -26,6 +26,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Matchers;
 import org.mockito.Mock;
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -86,5 +87,23 @@ public class WebSocketHandlerImplTest
                 webSocketProtocol,
                 additionalHeaders
         );
+    }
+
+    @Test
+    public void testCreatePong()
+    {
+//        WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
+//
+//        ByteBuffer ping = ByteBuffer.allocate(10);
+//        ByteBuffer pong = ByteBuffer.allocate(10);
+//
+//        ping.put("1234567890".getBytes());
+//        ping.flip();
+//        webSocketHandler.createPong(ping, pong);
+//
+//        int actual = pong.array()[0];
+//        int expected = 0x8a;
+//
+//        assertEquals(actual, expected);
     }
 }

@@ -51,7 +51,11 @@ public class WebSocketUpgrade
      */
     public void setPort(int port)
     {
-        this._port = String.valueOf(port);
+        this._port = "";
+        if (port != 0)
+        {
+            this._port = String.valueOf(port);
+        }
     }
 
     /**

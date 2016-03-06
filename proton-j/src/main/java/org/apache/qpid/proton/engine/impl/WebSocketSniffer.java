@@ -42,7 +42,7 @@ public class WebSocketSniffer extends HandshakeSniffingTransportWrapper<Transpor
             throw new IllegalArgumentException("insufficient bytes");
         }
 
-        if (bytes[0] != WebSocketHeader.FINALBINARYHEADER[0])
+        if (bytes[0] != WebSocketHeader.FINAL_OPCODE_BINARY)
         {
             _selectedTransportWrapper = _wrapper2;
             return;
