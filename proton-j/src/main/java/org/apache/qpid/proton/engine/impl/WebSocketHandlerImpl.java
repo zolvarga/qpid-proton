@@ -16,39 +16,31 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.apache.qpid.proton.engine.impl;
 
 import org.apache.qpid.proton.engine.WebSocketHandler;
 import org.apache.qpid.proton.engine.WebSocketHeader;
 
-import javax.naming.InsufficientResourcesException;
 import java.io.*;
+
 import java.nio.ByteBuffer;
+
 import java.security.SecureRandom;
+
 import java.util.*;
+
 
 public class WebSocketHandlerImpl implements WebSocketHandler
 {
     private WebSocketUpgrade _webSocketUpgrade = null;
 
-    protected WebSocketUpgrade createWebSocketUpgrade(
-            String hostName,
-            String webSocketPath,
-            int webSocketPort,
-            String webSocketProtocol,
-            Map<String, String> additionalHeaders)
+    protected WebSocketUpgrade createWebSocketUpgrade(String hostName, String webSocketPath, int webSocketPort, String webSocketProtocol, Map<String, String> additionalHeaders)
     {
         return new WebSocketUpgrade(hostName, webSocketPath, webSocketPort, webSocketProtocol, additionalHeaders);
     }
 
     @Override
-    public String createUpgradeRequest(
-            String hostName,
-            String webSocketPath,
-            int webSocketPort,
-            String webSocketProtocol,
-            Map<String, String> additionalHeaders)
+    public String createUpgradeRequest(String hostName, String webSocketPath, int webSocketPort, String webSocketProtocol, Map<String, String> additionalHeaders)
     {
         _webSocketUpgrade = createWebSocketUpgrade(hostName, webSocketPath, webSocketPort, webSocketProtocol, additionalHeaders);
         return _webSocketUpgrade.createUpgradeRequest();
@@ -81,9 +73,11 @@ public class WebSocketHandlerImpl implements WebSocketHandler
     public Boolean validateUpgradeReply(ByteBuffer buffer)
     {
         Boolean retVal = false;
+
         if (_webSocketUpgrade != null)
         {
             int size = buffer.remaining();
+
             if (size > 0)
             {
                 byte[] data = new byte[buffer.remaining()];
@@ -94,35 +88,26 @@ public class WebSocketHandlerImpl implements WebSocketHandler
                 _webSocketUpgrade = null;
             }
         }
+
         return retVal;
     }
 
     @Override
     public void wrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer)
     {
-        if ((srcBuffer != null) && (dstBuffer != null) && srcBuffer.remaining() > 0)
+        if ((srcBuffer != null) && (dstBuffer != null) && (srcBuffer.remaining() > 0))
         {
-//            // We always send final WebSocket frame
-//            // RFC: Indicates that this is the final fragment in a message.
-//            final byte FINBIT_SET = (byte) 0x80;
-//
-//            // We always send binary message (AMQP)
-//            // RFC: %x2 denotes a binary frame
-//            final byte OPCODE_BINARY = 0x2;
-
             // We always send masked data
             // RFC: "client MUST mask all frames that it sends to the server"
-//            final byte MASKBIT_SET = (byte) 0x80;
+            //            final byte MASKBIT_SET = (byte) 0x80;
             final byte[] MASKING_KEY = createRandomMaskingKey();
-
-            // Minimum header length is 6
-//            final byte MIN_HEADER_LENGTH = 6;
 
             // Get data length
             final int DATA_LENGTH = srcBuffer.remaining();
 
             // Auto growing buffer for the WS frame, initialized to minimum size
-            ByteArrayOutputStream webSocketFrame = new ByteArrayOutputStream(WebSocketHeader.MIN_HEADER_LENGTH + DATA_LENGTH);
+            ByteArrayOutputStream webSocketFrame = new ByteArrayOutputStream(WebSocketHeader.MIN_HEADER_LENGTH +
+                    DATA_LENGTH);
 
             // Create the first byte
             // We always send final WebSocket frame
@@ -141,7 +126,7 @@ public class WebSocketHandlerImpl implements WebSocketHandler
                 webSocketFrame.write(secondByte);
             }
             // RFC: If 126, the following 2 bytes interpreted as a 16-bit unsigned integer are the payload length
-            else if (DATA_LENGTH <=  65535)
+            else if (DATA_LENGTH <= 65535)
             {
                 // Create payload byte
                 secondByte = (byte) (secondByte | 126);
@@ -192,29 +177,32 @@ public class WebSocketHandlerImpl implements WebSocketHandler
     }
 
     @Override
-    public WebSocketMessageType unwrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer)
-    {
+    public WebSocketMessageType unwrapBuffer(ByteBuffer srcBuffer,
+        ByteBuffer dstBuffer) {
         WebSocketMessageType retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_EMPTY;
 
         if (srcBuffer.limit() > 1)
         {
-//            final byte OPCODE_SET = (byte) 0x0f;
-//            final byte OPCODE_BINARY = 0x2;
-//            final byte OPCODE_PING = 0x9;
-//            final byte MASKBIT_SET = (byte) 0x80;
-//            final byte PAYLOAD_SET = (byte) 0x7f;
+            //            final byte OPCODE_SET = (byte) 0x0f;
+            //            final byte OPCODE_BINARY = 0x2;
+            //            final byte OPCODE_PING = 0x9;
+            //            final byte MASKBIT_SET = (byte) 0x80;
+            //            final byte PAYLOAD_SET = (byte) 0x7f;
 
             // Read the first byte
             byte firstByte = srcBuffer.get();
+
             // Get and check the opcode
             byte opcode = (byte) (firstByte & WebSocketHeader.OPCODE_MASK);
 
             // Read the second byte
             byte secondByte = srcBuffer.get();
             byte maskBit = (byte) (secondByte & WebSocketHeader.MASKBIT_MASK);
-            byte payloadLength = (byte) (secondByte & WebSocketHeader.PAYLOAD_MASK);
+            byte payloadLength = (byte) (secondByte &
+                WebSocketHeader.PAYLOAD_MASK);
 
             long finalPayloadLength = 0;
+
             if (payloadLength < 126)
             {
                 finalPayloadLength = payloadLength;
@@ -225,21 +213,16 @@ public class WebSocketHandlerImpl implements WebSocketHandler
                 if (srcBuffer.limit() > 3)
                 {
                     finalPayloadLength = srcBuffer.getShort();
-                }
-                else
-                {
+                } else {
                     return WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH;
                 }
             }
             else if (payloadLength == 127)
             {
                 // Check if we have enough bytes to read
-                if (srcBuffer.limit() > 9)
-                {
+                if (srcBuffer.limit() > 9) {
                     finalPayloadLength = srcBuffer.getLong();
-                }
-                else
-                {
+                } else {
                     return WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH;
                 }
             }
@@ -270,6 +253,7 @@ public class WebSocketHandlerImpl implements WebSocketHandler
         final byte[] maskingKey = new byte[4];
         Random random = new SecureRandom();
         random.nextBytes(maskingKey);
+
         return maskingKey;
     }
 }
