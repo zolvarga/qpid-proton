@@ -30,6 +30,16 @@ public class WebSocketHandlerImpl implements WebSocketHandler
 {
     private WebSocketUpgrade _webSocketUpgrade = null;
 
+    protected WebSocketUpgrade createWebSocketUpgrade(
+            String hostName,
+            String webSocketPath,
+            int webSocketPort,
+            String webSocketProtocol,
+            Map<String, String> additionalHeaders)
+    {
+        return new WebSocketUpgrade(hostName, webSocketPath, webSocketPort, webSocketProtocol, additionalHeaders);
+    }
+
     @Override
     public String createUpgradeRequest(
             String hostName,
@@ -38,12 +48,13 @@ public class WebSocketHandlerImpl implements WebSocketHandler
             String webSocketProtocol,
             Map<String, String> additionalHeaders)
     {
-        _webSocketUpgrade = new WebSocketUpgrade(hostName, webSocketPath, webSocketPort, webSocketProtocol, additionalHeaders);
+        _webSocketUpgrade = createWebSocketUpgrade(hostName, webSocketPath, webSocketPort, webSocketProtocol, additionalHeaders);
         return _webSocketUpgrade.createUpgradeRequest();
     }
 
     @Override
-    public void createPong(ByteBuffer ping, ByteBuffer pong) {
+    public void createPong(ByteBuffer ping, ByteBuffer pong)
+    {
         pong.clear();
         byte[] buffer = new byte[ping.remaining()];
         ping.get(buffer);
@@ -52,7 +63,8 @@ public class WebSocketHandlerImpl implements WebSocketHandler
     }
 
     @Override
-    public Boolean validateUpgradeReply(ByteBuffer buffer) {
+    public Boolean validateUpgradeReply(ByteBuffer buffer)
+    {
         Boolean retVal = false;
         if (_webSocketUpgrade != null)
         {
@@ -71,7 +83,8 @@ public class WebSocketHandlerImpl implements WebSocketHandler
     }
 
     @Override
-    public void wrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer) {
+    public void wrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer)
+    {
         //  +---------------------------------------------------------------+
         //  0                   1                   2                   3   |
         //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 |
@@ -124,12 +137,14 @@ public class WebSocketHandlerImpl implements WebSocketHandler
             byte secondByte = MASKBIT_SET;
 
             // RFC: The length of the "Payload data", in bytes: if 0-125, that is the payload length.
-            if (DATA_LENGTH < 126) {
+            if (DATA_LENGTH < 126)
+            {
                 secondByte = (byte) (secondByte | DATA_LENGTH);
                 webSocketFrame.write(secondByte);
             }
             // RFC: If 126, the following 2 bytes interpreted as a 16-bit unsigned integer are the payload length
-            else if (DATA_LENGTH <=  65535) {
+            else if (DATA_LENGTH <=  65535)
+            {
                 // Create payload byte
                 secondByte = (byte) (secondByte | 126);
                 webSocketFrame.write(secondByte);
@@ -140,7 +155,8 @@ public class WebSocketHandlerImpl implements WebSocketHandler
             }
             // RFC: If 127, the following 8 bytes interpreted as a 64-bit unsigned integer (the most significant bit MUST be 0) are the payload length.
             // No need for "else if" because if it is longer than what 8 byte length can hold... or bets are off anyway
-            else {
+            else
+            {
                 secondByte = (byte) (secondByte | 127);
                 webSocketFrame.write(secondByte);
 
@@ -164,7 +180,8 @@ public class WebSocketHandlerImpl implements WebSocketHandler
             webSocketFrame.write(MASKING_KEY[3]);
 
             // Write masked data
-            for (int i = 0; i < DATA_LENGTH; i++) {
+            for (int i = 0; i < DATA_LENGTH; i++)
+            {
                 byte nextByte = srcBuffer.get();
                 nextByte ^= MASKING_KEY[i % 4];
                 webSocketFrame.write(nextByte);
@@ -177,7 +194,8 @@ public class WebSocketHandlerImpl implements WebSocketHandler
     }
 
     @Override
-    public WebSocketMessageType unwrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer) {
+    public WebSocketMessageType unwrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer)
+    {
         //  +---------------------------------------------------------------+
         //  0                   1                   2                   3   |
         //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 |
@@ -199,7 +217,8 @@ public class WebSocketHandlerImpl implements WebSocketHandler
         //  +---------------------------------------------------------------+
         WebSocketMessageType retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_EMPTY;
 
-        if (srcBuffer.limit() > 1) {
+        if (srcBuffer.limit() > 1)
+        {
             final byte OPCODE_SET = (byte) 0x0f;
             final byte OPCODE_BINARY = 0x2;
             final byte OPCODE_PING = 0x9;
@@ -217,22 +236,31 @@ public class WebSocketHandlerImpl implements WebSocketHandler
             byte payloadLength = (byte) (secondByte & PAYLOAD_SET);
 
             long finalPayloadLength = 0;
-            if (payloadLength < 126) {
+            if (payloadLength < 126)
+            {
                 finalPayloadLength = payloadLength;
-            } else if (payloadLength == 126) {
+            }
+            else if (payloadLength == 126)
+            {
                 // Check if we have enough bytes to read
-                if (srcBuffer.limit() > 3) {
+                if (srcBuffer.limit() > 3)
+                {
                     finalPayloadLength = srcBuffer.getShort();
                 }
-                else {
+                else
+                {
                     return WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH;
                 }
-            } else if (payloadLength == 127) {
+            }
+            else if (payloadLength == 127)
+            {
                 // Check if we have enough bytes to read
-                if (srcBuffer.limit() > 9) {
+                if (srcBuffer.limit() > 9)
+                {
                     finalPayloadLength = srcBuffer.getLong();
                 }
-                else {
+                else
+                {
                     return WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH;
                 }
             }
@@ -241,14 +269,16 @@ public class WebSocketHandlerImpl implements WebSocketHandler
             srcBuffer.compact();
             srcBuffer.flip();
 
-            if (opcode == OPCODE_BINARY) {
+            if (opcode == OPCODE_BINARY)
+            {
                 return WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_AMQP;
             }
-            else if (opcode == OPCODE_PING) {
-
+            else if (opcode == OPCODE_PING)
+            {
                 return WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_PING;
             }
-            else {
+            else
+            {
                 return WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID;
             }
         }
