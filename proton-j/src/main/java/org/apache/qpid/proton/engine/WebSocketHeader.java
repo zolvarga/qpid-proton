@@ -25,6 +25,5 @@ public interface WebSocketHeader
 
     // RFC6455
     // Final frames with binary content
-    public static final byte[] FINALBINARYHEADER = new byte[]
-            { 82 };
+    public static final byte[] FINALBINARYHEADER = new byte[] { 82 };
 }
