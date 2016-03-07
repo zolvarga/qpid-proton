@@ -49,7 +49,7 @@ public class WebSocketHandlerImpl implements WebSocketHandler
     @Override
     public void createPong(ByteBuffer ping, ByteBuffer pong)
     {
-        if ((ping == null) && (pong == null))
+        if ((ping == null) || (pong == null))
         {
             throw new IllegalArgumentException("input parameter cannot be null");
         }
@@ -61,11 +61,16 @@ public class WebSocketHandlerImpl implements WebSocketHandler
 
         if (ping.remaining() > 0)
         {
+            byte[] buffer = ping.array();
+            buffer[0] = WebSocketHeader.FINBIT_MASK | WebSocketHeader.OPCODE_PONG;
+
             pong.clear();
-            byte[] buffer = new byte[ping.remaining()];
-            buffer = ping.array();
-            buffer[0] = (byte) 138;
             pong.put(buffer);
+        }
+        else
+        {
+            pong.clear();
+            pong.limit(0);
         }
     }
 

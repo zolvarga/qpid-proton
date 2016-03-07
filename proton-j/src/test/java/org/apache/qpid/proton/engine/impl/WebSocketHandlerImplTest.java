@@ -20,6 +20,7 @@
 */
 package org.apache.qpid.proton.engine.impl;
 
+import org.apache.qpid.proton.engine.WebSocketHeader;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InjectMocks;
@@ -92,18 +93,67 @@ public class WebSocketHandlerImplTest
     @Test
     public void testCreatePong()
     {
-//        WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
-//
-//        ByteBuffer ping = ByteBuffer.allocate(10);
-//        ByteBuffer pong = ByteBuffer.allocate(10);
-//
-//        ping.put("1234567890".getBytes());
-//        ping.flip();
-//        webSocketHandler.createPong(ping, pong);
-//
-//        int actual = pong.array()[0];
-//        int expected = 0x8a;
-//
-//        assertEquals(actual, expected);
+        WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
+
+        ByteBuffer ping = ByteBuffer.allocate(10);
+        ByteBuffer pong = ByteBuffer.allocate(10);
+
+        byte[] buffer = new byte[10];
+        buffer[0] = WebSocketHeader.FINBIT_MASK | WebSocketHeader.OPCODE_PING;
+        ping.put(buffer);
+        ping.flip();
+        webSocketHandler.createPong(ping, pong);
+
+        int actual = pong.array()[0];
+        int expected = WebSocketHeader.FINBIT_MASK | WebSocketHeader.OPCODE_PONG;
+
+        assertEquals(actual, expected);
+    }
+
+    @Test (expected = IllegalArgumentException.class)
+    public void testCreatePong_ping_null()
+    {
+        WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
+
+        ByteBuffer pong = ByteBuffer.allocate(10);
+
+        webSocketHandler.createPong(null, pong);
+    }
+
+    @Test (expected = IllegalArgumentException.class)
+    public void testCreatePong_pong_null()
+    {
+        WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
+
+        ByteBuffer ping = ByteBuffer.allocate(10);
+
+        webSocketHandler.createPong(ping, null);
+    }
+
+    @Test (expected = IllegalArgumentException.class)
+    public void testCreatePong_pong_capacity_insufficient()
+    {
+        WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
+
+        ByteBuffer ping = ByteBuffer.allocate(10);
+        ByteBuffer pong = ByteBuffer.allocate(9);
+
+        webSocketHandler.createPong(ping, pong);
+    }
+
+    @Test
+    public void testCreatePong_ping_no_remaining()
+    {
+        WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
+
+        ByteBuffer ping = ByteBuffer.allocate(10);
+        ByteBuffer pong = ByteBuffer.allocate(10);
+
+        ping.flip();
+
+        webSocketHandler.createPong(ping, pong);
+
+        assertEquals(0, pong.limit());
+        assertEquals(0, pong.position());
     }
 }
