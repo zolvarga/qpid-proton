@@ -145,7 +145,7 @@ public class WebSocketImpl implements WebSocket
     public WebSocketHandler.WebSocketMessageType unwrapBuffer(ByteBuffer buffer) {
         if (_isWebSocketEnabled)
         {
-            return _webSocketHandler.unwrapBuffer(buffer, null);
+            return _webSocketHandler.unwrapBuffer(buffer);
         }
         else
         {

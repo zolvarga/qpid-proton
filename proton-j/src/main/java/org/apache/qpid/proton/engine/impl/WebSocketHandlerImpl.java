@@ -21,7 +21,6 @@ package org.apache.qpid.proton.engine.impl;
 import org.apache.qpid.proton.engine.WebSocketHandler;
 import org.apache.qpid.proton.engine.WebSocketHeader;
 
-import javax.naming.InsufficientResourcesException;
 import java.io.*;
 
 import java.nio.ByteBuffer;
@@ -117,7 +116,7 @@ public class WebSocketHandlerImpl implements WebSocketHandler
             final int DATA_LENGTH = srcBuffer.remaining();
 
             // Auto growing buffer for the WS frame, initialized to minimum size
-            ByteArrayOutputStream webSocketFrame = new ByteArrayOutputStream(WebSocketHeader.MIN_HEADER_LENGTH +
+            ByteArrayOutputStream webSocketFrame = new ByteArrayOutputStream(WebSocketHeader.MIN_HEADER_LENGTH_MASKED +
                     DATA_LENGTH);
 
             // Create the first byte
@@ -197,18 +196,17 @@ public class WebSocketHandlerImpl implements WebSocketHandler
     }
 
     @Override
-    public WebSocketMessageType unwrapBuffer(ByteBuffer srcBuffer,
-        ByteBuffer dstBuffer) {
+    public WebSocketMessageType unwrapBuffer(ByteBuffer srcBuffer)
+    {
+        if (srcBuffer == null)
+        {
+            throw new IllegalArgumentException("input parameter is null");
+        }
+
         WebSocketMessageType retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_EMPTY;
 
-        if (srcBuffer.limit() > 1)
+        if (srcBuffer.remaining() > 0)
         {
-            //            final byte OPCODE_SET = (byte) 0x0f;
-            //            final byte OPCODE_BINARY = 0x2;
-            //            final byte OPCODE_PING = 0x9;
-            //            final byte MASKBIT_SET = (byte) 0x80;
-            //            final byte PAYLOAD_SET = (byte) 0x7f;
-
             // Read the first byte
             byte firstByte = srcBuffer.get();
 
@@ -218,8 +216,7 @@ public class WebSocketHandlerImpl implements WebSocketHandler
             // Read the second byte
             byte secondByte = srcBuffer.get();
             byte maskBit = (byte) (secondByte & WebSocketHeader.MASKBIT_MASK);
-            byte payloadLength = (byte) (secondByte &
-                WebSocketHeader.PAYLOAD_MASK);
+            byte payloadLength = (byte) (secondByte & WebSocketHeader.PAYLOAD_MASK);
 
             long finalPayloadLength = 0;
 
@@ -233,35 +230,41 @@ public class WebSocketHandlerImpl implements WebSocketHandler
                 if (srcBuffer.limit() > 3)
                 {
                     finalPayloadLength = srcBuffer.getShort();
-                } else {
-                    return WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH;
+                }
+                else
+                {
+                    retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH;
                 }
             }
             else if (payloadLength == 127)
             {
                 // Check if we have enough bytes to read
-                if (srcBuffer.limit() > 9) {
+                if (srcBuffer.limit() > 9)
+                {
                     finalPayloadLength = srcBuffer.getLong();
-                } else {
-                    return WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH;
+                }
+                else
+                {
+                    retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH;
                 }
             }
 
-            // Now we have read all the headers, let's validate the message and prepare the return buffer
-            srcBuffer.compact();
-            srcBuffer.flip();
+            if (retVal == WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_EMPTY)
+            {
+                // Now we have read all the headers, let's validate the message and prepare the return buffer
+                srcBuffer.compact();
+                srcBuffer.flip();
 
-            if (opcode == WebSocketHeader.OPCODE_BINARY)
-            {
-                return WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_AMQP;
-            }
-            else if (opcode == WebSocketHeader.OPCODE_PING)
-            {
-                return WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_PING;
-            }
-            else
-            {
-                return WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID;
+                if (opcode == WebSocketHeader.OPCODE_BINARY)
+                {
+                    retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_AMQP;
+                } else if (opcode == WebSocketHeader.OPCODE_PING)
+                {
+                    retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_PING;
+                } else
+                {
+                    retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID;
+                }
             }
         }
 

@@ -20,15 +20,13 @@
 */
 package org.apache.qpid.proton.engine.impl;
 
+import org.apache.qpid.proton.engine.WebSocketHandler;
 import org.apache.qpid.proton.engine.WebSocketHeader;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -243,7 +241,7 @@ public class WebSocketHandlerImplTest
     }
 
     @Test
-    public void testWrapBuffer_short_message()
+    public void testWrapBuffer_short_payload()
     {
         WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
         WebSocketHandlerImpl spyWebSocketHandler = spy(webSocketHandler);
@@ -256,12 +254,12 @@ public class WebSocketHandlerImplTest
         Random random = new SecureRandom();
         random.nextBytes(data);
 
-        ByteBuffer srcBuffer = ByteBuffer.allocate(messageLength + WebSocketHeader.MIN_HEADER_LENGTH);
-        ByteBuffer dstBuffer = ByteBuffer.allocate(messageLength + WebSocketHeader.MIN_HEADER_LENGTH);
+        ByteBuffer srcBuffer = ByteBuffer.allocate(messageLength + WebSocketHeader.MIN_HEADER_LENGTH_MASKED);
+        ByteBuffer dstBuffer = ByteBuffer.allocate(messageLength + WebSocketHeader.MIN_HEADER_LENGTH_MASKED);
         srcBuffer.put(data);
         srcBuffer.flip();
 
-        int expectedHeaderSize = WebSocketHeader.MIN_HEADER_LENGTH;
+        int expectedHeaderSize = WebSocketHeader.MIN_HEADER_LENGTH_MASKED;
         byte[] expected = new byte[dstBuffer.capacity()];
         expected[0] = (byte) (WebSocketHeader.FINBIT_MASK | WebSocketHeader.OPCODE_BINARY);
         expected[1] = (byte) (WebSocketHeader.MASKBIT_MASK | srcBuffer.limit());
@@ -299,7 +297,7 @@ public class WebSocketHandlerImplTest
     }
 
     @Test
-    public void testWrapBuffer_short_buffer_max()
+    public void testWrapBuffer_short_payload_max()
     {
         WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
         WebSocketHandlerImpl spyWebSocketHandler = spy(webSocketHandler);
@@ -312,12 +310,12 @@ public class WebSocketHandlerImplTest
         Random random = new SecureRandom();
         random.nextBytes(data);
 
-        ByteBuffer srcBuffer = ByteBuffer.allocate(messageLength + WebSocketHeader.MIN_HEADER_LENGTH);
-        ByteBuffer dstBuffer = ByteBuffer.allocate(messageLength + WebSocketHeader.MIN_HEADER_LENGTH);
+        ByteBuffer srcBuffer = ByteBuffer.allocate(messageLength + WebSocketHeader.MIN_HEADER_LENGTH_MASKED);
+        ByteBuffer dstBuffer = ByteBuffer.allocate(messageLength + WebSocketHeader.MIN_HEADER_LENGTH_MASKED);
         srcBuffer.put(data);
         srcBuffer.flip();
 
-        int expectedHeaderSize = WebSocketHeader.MIN_HEADER_LENGTH;
+        int expectedHeaderSize = WebSocketHeader.MIN_HEADER_LENGTH_MASKED;
         byte[] expected = new byte[dstBuffer.capacity()];
         expected[0] = (byte) (WebSocketHeader.FINBIT_MASK | WebSocketHeader.OPCODE_BINARY);
         expected[1] = (byte) (WebSocketHeader.MASKBIT_MASK | srcBuffer.limit());
@@ -355,7 +353,7 @@ public class WebSocketHandlerImplTest
     }
 
     @Test
-    public void testWrapBuffer_medium_buffer()
+    public void testWrapBuffer_medium_payload()
     {
         WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
         WebSocketHandlerImpl spyWebSocketHandler = spy(webSocketHandler);
@@ -418,7 +416,7 @@ public class WebSocketHandlerImplTest
     }
 
     @Test
-    public void testWrapBuffer_medium_buffer_max()
+    public void testWrapBuffer_medium_payload_max()
     {
         WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
         WebSocketHandlerImpl spyWebSocketHandler = spy(webSocketHandler);
@@ -481,7 +479,7 @@ public class WebSocketHandlerImplTest
     }
 
     @Test
-    public void testWrapBuffer_long_buffer()
+    public void testWrapBuffer_long_payload()
     {
         WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
         WebSocketHandlerImpl spyWebSocketHandler = spy(webSocketHandler);
@@ -592,5 +590,70 @@ public class WebSocketHandlerImplTest
         ByteBuffer dstBuffer = ByteBuffer.allocate(messageLength);;
 
         spyWebSocketHandler.wrapBuffer(srcBuffer, dstBuffer);
+    }
+
+    @Test
+    public void testUnwrapBuffer_short_message()
+    {
+        WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
+        WebSocketHandlerImpl spyWebSocketHandler = spy(webSocketHandler);
+
+        int payloadLength = 10;
+        int messageLength = payloadLength + WebSocketHeader.MIN_HEADER_LENGTH;
+
+        byte[] data = new byte[messageLength];
+        Random random = new SecureRandom();
+        random.nextBytes(data);
+
+        data[0] = (byte) (WebSocketHeader.FINBIT_MASK | WebSocketHeader.OPCODE_BINARY);
+        data[1] = (byte) (messageLength);
+
+        ByteBuffer srcBuffer = ByteBuffer.allocate(messageLength);
+        srcBuffer.put(data);
+        srcBuffer.flip();
+
+        assertEquals(spyWebSocketHandler.unwrapBuffer(srcBuffer), WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_AMQP);
+
+        byte[] expected = Arrays.copyOfRange(data, 2, 12);
+        byte[] actual = new byte[srcBuffer.limit()];
+        srcBuffer.get(actual);
+        assertTrue(Arrays.equals(expected, actual));
+    }
+
+    @Test
+    public void testUnwrapBuffer_invalid_opcode()
+    {
+        WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
+        WebSocketHandlerImpl spyWebSocketHandler = spy(webSocketHandler);
+
+        int messageLength = 10;
+        ByteBuffer srcBuffer = ByteBuffer.allocate(messageLength);
+
+        assertEquals(spyWebSocketHandler.unwrapBuffer(srcBuffer), WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID);
+    }
+
+    @Test
+    public void testUnwrapBuffer_src_buffer_empty()
+    {
+        WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
+        WebSocketHandlerImpl spyWebSocketHandler = spy(webSocketHandler);
+
+        int messageLength = 10;
+        ByteBuffer srcBuffer = ByteBuffer.allocate(messageLength);
+        srcBuffer.flip();
+
+        assertEquals(spyWebSocketHandler.unwrapBuffer(srcBuffer), WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_EMPTY);
+    }
+
+    @Test (expected = IllegalArgumentException.class)
+    public void testUnwrapBuffer_src_buffer_null()
+    {
+        WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
+        WebSocketHandlerImpl spyWebSocketHandler = spy(webSocketHandler);
+
+        int messageLength = 10;
+        ByteBuffer srcBuffer = null;
+
+        spyWebSocketHandler.unwrapBuffer(srcBuffer);
     }
 }

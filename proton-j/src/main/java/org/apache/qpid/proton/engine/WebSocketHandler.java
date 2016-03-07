@@ -44,6 +44,6 @@ public interface WebSocketHandler
             Map<String, String> additionalHeaders);
     Boolean validateUpgradeReply(ByteBuffer buffer);
     void wrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer);
-    WebSocketMessageType unwrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer);
+    WebSocketMessageType unwrapBuffer(ByteBuffer srcBuffer);
     void createPong(ByteBuffer srcBuffer, ByteBuffer dstBuffer);
 }

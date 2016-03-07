@@ -42,10 +42,11 @@ public interface WebSocketHeader
     //  |                     Payload Data continued ...                |
     //  +---------------------------------------------------------------+
 
-    public static final int HEADER_SIZE = 8;
-    public static final byte MIN_HEADER_LENGTH = 6;
-    public static final byte MED_HEADER_LENGTH = 8;
-    public static final byte MAX_HEADER_LENGTH = 14;
+    public static final int HEADER_SIZE               = 8;
+    public static final byte MIN_HEADER_LENGTH        = 2;
+    public static final byte MIN_HEADER_LENGTH_MASKED = 6;
+    public static final byte MED_HEADER_LENGTH        = 8;
+    public static final byte MAX_HEADER_LENGTH        = 14;
 
     // Masks
     public static final byte FINBIT_MASK   = (byte) 0x80;
@@ -57,6 +58,4 @@ public interface WebSocketHeader
     public static final byte PAYLOAD_MASK  = (byte) 0x7f;
 
     public static final byte FINAL_OPCODE_BINARY = FINBIT_MASK | OPCODE_BINARY;
-//    public static final byte FINAL_PING = FINBIT_MASK | OPCODE_PING;
-//    public static final byte FINAL_PONG = FINBIT_MASK | OPCODE_PONG;
 }
