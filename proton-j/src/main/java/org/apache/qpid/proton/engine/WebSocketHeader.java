@@ -44,6 +44,8 @@ public interface WebSocketHeader
 
     public static final int HEADER_SIZE = 8;
     public static final byte MIN_HEADER_LENGTH = 6;
+    public static final byte MED_HEADER_LENGTH = 8;
+    public static final byte MAX_HEADER_LENGTH = 14;
 
     // Masks
     public static final byte FINBIT_MASK   = (byte) 0x80;

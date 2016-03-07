@@ -21,6 +21,7 @@ package org.apache.qpid.proton.engine.impl;
 import org.apache.qpid.proton.engine.WebSocketHandler;
 import org.apache.qpid.proton.engine.WebSocketHeader;
 
+import javax.naming.InsufficientResourcesException;
 import java.io.*;
 
 import java.nio.ByteBuffer;
@@ -100,7 +101,12 @@ public class WebSocketHandlerImpl implements WebSocketHandler
     @Override
     public void wrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer)
     {
-        if ((srcBuffer != null) && (dstBuffer != null) && (srcBuffer.remaining() > 0))
+        if ((srcBuffer == null) || (dstBuffer == null))
+        {
+            throw new IllegalArgumentException("input parameter is null");
+        }
+
+        if (srcBuffer.remaining() > 0)
         {
             // We always send masked data
             // RFC: "client MUST mask all frames that it sends to the server"
@@ -148,13 +154,11 @@ public class WebSocketHandlerImpl implements WebSocketHandler
                 secondByte = (byte) (secondByte | 127);
                 webSocketFrame.write(secondByte);
 
-                // In this case the first four bytes are always zero
-                webSocketFrame.write(0);
-                webSocketFrame.write(0);
-                webSocketFrame.write(0);
-                webSocketFrame.write(0);
-
                 // Create the least significant 4 bytes
+                webSocketFrame.write((byte) (DATA_LENGTH >>> 56));
+                webSocketFrame.write((byte) (DATA_LENGTH >>> 48));
+                webSocketFrame.write((byte) (DATA_LENGTH >>> 40));
+                webSocketFrame.write((byte) (DATA_LENGTH >>> 32));
                 webSocketFrame.write((byte) (DATA_LENGTH >>> 24));
                 webSocketFrame.write((byte) (DATA_LENGTH >>> 16));
                 webSocketFrame.write((byte) (DATA_LENGTH >>> 8));
@@ -177,7 +181,18 @@ public class WebSocketHandlerImpl implements WebSocketHandler
 
             // Copy frame to destination buffer
             dstBuffer.clear();
-            dstBuffer.put(webSocketFrame.toByteArray());
+            if (dstBuffer.capacity() >= webSocketFrame.size())
+            {
+                dstBuffer.put(webSocketFrame.toByteArray());
+            }
+            else
+            {
+                throw new OutOfMemoryError("insufficient output buffer size");
+            }
+        }
+        else
+        {
+            dstBuffer.clear();
         }
     }
 
@@ -253,7 +268,7 @@ public class WebSocketHandlerImpl implements WebSocketHandler
         return retVal;
     }
 
-    private static byte[] createRandomMaskingKey()
+    protected byte[] createRandomMaskingKey()
     {
         final byte[] maskingKey = new byte[4];
         Random random = new SecureRandom();
