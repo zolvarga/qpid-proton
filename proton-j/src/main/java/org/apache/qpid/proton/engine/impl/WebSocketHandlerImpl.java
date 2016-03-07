@@ -116,8 +116,7 @@ public class WebSocketHandlerImpl implements WebSocketHandler
             final int DATA_LENGTH = srcBuffer.remaining();
 
             // Auto growing buffer for the WS frame, initialized to minimum size
-            ByteArrayOutputStream webSocketFrame = new ByteArrayOutputStream(WebSocketHeader.MIN_HEADER_LENGTH_MASKED +
-                    DATA_LENGTH);
+            ByteArrayOutputStream webSocketFrame = new ByteArrayOutputStream(WebSocketHeader.MIN_HEADER_LENGTH_MASKED + DATA_LENGTH);
 
             // Create the first byte
             // We always send final WebSocket frame
@@ -130,16 +129,16 @@ public class WebSocketHandlerImpl implements WebSocketHandler
             byte secondByte = WebSocketHeader.MASKBIT_MASK;
 
             // RFC: The length of the "Payload data", in bytes: if 0-125, that is the payload length.
-            if (DATA_LENGTH < 126)
+            if (DATA_LENGTH <= WebSocketHeader.PAYLOAD_SHORT_MAX)
             {
                 secondByte = (byte) (secondByte | DATA_LENGTH);
                 webSocketFrame.write(secondByte);
             }
             // RFC: If 126, the following 2 bytes interpreted as a 16-bit unsigned integer are the payload length
-            else if (DATA_LENGTH <= 65535)
+            else if (DATA_LENGTH <= WebSocketHeader.PAYLOAD_MEDIUM_MAX)
             {
                 // Create payload byte
-                secondByte = (byte) (secondByte | 126);
+                secondByte = (byte) (secondByte | WebSocketHeader.PAYLOAD_EXTENDED_16);
                 webSocketFrame.write(secondByte);
 
                 // Create extended length bytes
@@ -150,7 +149,7 @@ public class WebSocketHandlerImpl implements WebSocketHandler
             // No need for "else if" because if it is longer than what 8 byte length can hold... or bets are off anyway
             else
             {
-                secondByte = (byte) (secondByte | 127);
+                secondByte = (byte) (secondByte | WebSocketHeader.PAYLOAD_EXTENDED_64);
                 webSocketFrame.write(secondByte);
 
                 // Create the least significant 4 bytes
@@ -205,7 +204,7 @@ public class WebSocketHandlerImpl implements WebSocketHandler
 
         WebSocketMessageType retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_EMPTY;
 
-        if (srcBuffer.remaining() > 0)
+        if (srcBuffer.remaining() > WebSocketHeader.MIN_HEADER_LENGTH)
         {
             // Read the first byte
             byte firstByte = srcBuffer.get();
@@ -220,11 +219,11 @@ public class WebSocketHandlerImpl implements WebSocketHandler
 
             long finalPayloadLength = 0;
 
-            if (payloadLength < 126)
+            if (payloadLength <= WebSocketHeader.PAYLOAD_SHORT_MAX)
             {
                 finalPayloadLength = payloadLength;
             }
-            else if (payloadLength == 126)
+            else if (payloadLength == WebSocketHeader.PAYLOAD_EXTENDED_16)
             {
                 // Check if we have enough bytes to read
                 if (srcBuffer.limit() > 3)
@@ -236,7 +235,7 @@ public class WebSocketHandlerImpl implements WebSocketHandler
                     retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH;
                 }
             }
-            else if (payloadLength == 127)
+            else if (payloadLength == WebSocketHeader.PAYLOAD_EXTENDED_64)
             {
                 // Check if we have enough bytes to read
                 if (srcBuffer.limit() > 9)
@@ -258,10 +257,12 @@ public class WebSocketHandlerImpl implements WebSocketHandler
                 if (opcode == WebSocketHeader.OPCODE_BINARY)
                 {
                     retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_AMQP;
-                } else if (opcode == WebSocketHeader.OPCODE_PING)
+                }
+                else if (opcode == WebSocketHeader.OPCODE_PING)
                 {
                     retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_PING;
-                } else
+                }
+                else
                 {
                     retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID;
                 }

@@ -32,7 +32,7 @@ public class WebSocketSniffer extends HandshakeSniffingTransportWrapper<Transpor
     @Override
     protected int bufferSize()
     {
-        return WebSocketHeader.HEADER_SIZE;
+        return WebSocketHeader.MIN_HEADER_LENGTH_MASKED;
     }
 
     @Override

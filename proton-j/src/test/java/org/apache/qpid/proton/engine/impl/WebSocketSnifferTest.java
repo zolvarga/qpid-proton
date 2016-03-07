@@ -36,9 +36,9 @@ public class WebSocketSnifferTest
 
         WebSocketSniffer webSocketSniffer = new WebSocketSniffer(mockTransportWrapper1, mockTransportWrapper2);
 
-        assertEquals("Incorrect header size", WebSocketHeader.HEADER_SIZE, webSocketSniffer.bufferSize());
+        assertEquals("Incorrect header size", WebSocketHeader.MIN_HEADER_LENGTH_MASKED, webSocketSniffer.bufferSize());
 
-        byte[] bytes = new byte[WebSocketHeader.HEADER_SIZE];
+        byte[] bytes = new byte[WebSocketHeader.MIN_HEADER_LENGTH_MASKED];
         bytes[0] = WebSocketHeader.FINAL_OPCODE_BINARY;
 
         webSocketSniffer.makeDetermination(bytes);
@@ -53,9 +53,9 @@ public class WebSocketSnifferTest
 
         WebSocketSniffer webSocketSniffer = new WebSocketSniffer(mockTransportWrapper1, mockTransportWrapper2);
 
-        assertEquals("Incorrect header size", WebSocketHeader.HEADER_SIZE, webSocketSniffer.bufferSize());
+        assertEquals("Incorrect header size", WebSocketHeader.MIN_HEADER_LENGTH_MASKED, webSocketSniffer.bufferSize());
 
-        byte[] bytes = new byte[WebSocketHeader.HEADER_SIZE];
+        byte[] bytes = new byte[WebSocketHeader.MIN_HEADER_LENGTH_MASKED];
         bytes[0] = (byte) 0x81;
 
         webSocketSniffer.makeDetermination(bytes);
@@ -70,9 +70,9 @@ public class WebSocketSnifferTest
 
         WebSocketSniffer webSocketSniffer = new WebSocketSniffer(mockTransportWrapper1, mockTransportWrapper2);
 
-        assertEquals("Incorrect header size", WebSocketHeader.HEADER_SIZE, webSocketSniffer.bufferSize());
+        assertEquals("Incorrect header size", WebSocketHeader.MIN_HEADER_LENGTH_MASKED, webSocketSniffer.bufferSize());
 
-        byte[] bytes = new byte[WebSocketHeader.HEADER_SIZE-1];
+        byte[] bytes = new byte[WebSocketHeader.MIN_HEADER_LENGTH_MASKED-1];
         bytes[0] = WebSocketHeader.FINAL_OPCODE_BINARY;
 
         webSocketSniffer.makeDetermination(bytes);

@@ -117,25 +117,14 @@ public class WebSocketUpgrade {
         this._webSocketKey = createWebSocketKey();
 
         String _endOfLine = "\r\n";
-        StringBuilder stringBuilder = new StringBuilder().append("GET ")
-                                                         .append(this._path)
-                                                         .append(" HTTP/1.1")
-                                                         .append(_endOfLine)
-                                                         .append("Connection: Upgrade")
-                                                         .append(_endOfLine)
-                                                         .append("Upgrade: websocket")
-                                                         .append(_endOfLine)
-                                                         .append("Sec-WebSocket-Version: 13")
-                                                         .append(_endOfLine)
-                                                         .append("Sec-WebSocket-Key: ")
-                                                         .append(this._webSocketKey)
-                                                         .append(_endOfLine)
-                                                         .append("Sec-WebSocket-Protocol: ")
-                                                         .append(this._protocol)
-                                                         .append(_endOfLine);
-
-        stringBuilder.append("Host: ").append(this._host + this._port)
-                     .append(_endOfLine);
+        StringBuilder stringBuilder = new StringBuilder()
+                .append("GET ").append(this._path).append(" HTTP/1.1").append(_endOfLine)
+                .append("Connection: Upgrade").append(_endOfLine)
+                .append("Upgrade: websocket").append(_endOfLine)
+                .append("Sec-WebSocket-Version: 13").append(_endOfLine)
+                .append("Sec-WebSocket-Key: ").append(this._webSocketKey).append(_endOfLine)
+                .append("Sec-WebSocket-Protocol: ").append(this._protocol).append(_endOfLine)
+                .append("Host: ").append(this._host + this._colon + this._port).append(_endOfLine);
 
         if (_additionalHeaders != null) {
             for (Map.Entry<String, String> entry : _additionalHeaders.entrySet()) {
