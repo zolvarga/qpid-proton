@@ -20,9 +20,13 @@ public class WebSocketUpgrade {
     private String _webSocketKey = "";
     private Map<String, String> _additionalHeaders = null;
 
-    public WebSocketUpgrade(String hostName, String webSocketPath,
-        int webSocketPort, String webSocketProtocol,
-        Map<String, String> additionalHeaders) {
+    public WebSocketUpgrade(
+            String hostName,
+            String webSocketPath,
+            int webSocketPort,
+            String webSocketProtocol,
+            Map<String, String> additionalHeaders)
+    {
         setHost(hostName);
         setPath(webSocketPath);
         setPort(webSocketPort);
