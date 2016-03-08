@@ -48,7 +48,6 @@ public class WebSocketImpl implements WebSocket
     private int _webSocketHeaderSize = 0;
 
     private WebSocketHandler _webSocketHandler;
-    private Boolean _isWebSocketEnabled = false;
     private WebSocketState _state = WebSocketState.PN_WS_NOT_STARTED;
 
     private String _host = "";
@@ -56,6 +55,8 @@ public class WebSocketImpl implements WebSocket
     private int _port = 0;
     private String _protocol = "";
     private Map<String, String> _additionalHeaders = null;
+
+    protected Boolean _isWebSocketEnabled = false;
 
     public WebSocketImpl(int maxFrameSize)
     {
@@ -71,7 +72,8 @@ public class WebSocketImpl implements WebSocket
             int port,
             String protocol,
             Map<String, String> additionalHeaders,
-            WebSocketHandler webSocketHandler)
+            WebSocketHandler webSocketHandler
+    )
     {
         _host = host;
         _path = path;
@@ -157,6 +159,36 @@ public class WebSocketImpl implements WebSocket
     public WebSocketState getState()
     {
         return _state;
+    }
+
+    @Override
+    public ByteBuffer getOutputBuffer()
+    {
+        return _outputBuffer.asReadOnlyBuffer();
+    }
+
+    @Override
+    public ByteBuffer getInputBuffer()
+    {
+        return _inputBuffer.asReadOnlyBuffer();
+    }
+
+    @Override
+    public ByteBuffer getPingBuffer()
+    {
+        return _pingBuffer.asReadOnlyBuffer();
+    }
+
+    @Override
+    public Boolean getEnabled()
+    {
+        return _isWebSocketEnabled;
+    }
+
+    @Override
+    public WebSocketHandler getWebSocketHandler()
+    {
+        return _webSocketHandler;
     }
 
     @Override
