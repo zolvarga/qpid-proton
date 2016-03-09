@@ -1032,6 +1032,34 @@ public class WebSocketHandlerImplTest
     }
 
     @Test
+    public void testUnwrapBuffer_opcode_close()
+    {
+        WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
+        WebSocketHandlerImpl spyWebSocketHandler = spy(webSocketHandler);
+
+        int payloadLength = 100;
+        int messageLength = payloadLength + WebSocketHeader.MIN_HEADER_LENGTH;
+
+        byte[] data = new byte[messageLength];
+        Random random = new SecureRandom();
+        random.nextBytes(data);
+
+        data[0] = (byte) (WebSocketHeader.FINBIT_MASK | WebSocketHeader.OPCODE_CLOSE);
+        data[1] = (byte) (payloadLength);
+
+        ByteBuffer srcBuffer = ByteBuffer.allocate(messageLength);
+        srcBuffer.put(data);
+        srcBuffer.flip();
+
+        assertEquals(spyWebSocketHandler.unwrapBuffer(srcBuffer), WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_CLOSE);
+
+        byte[] expected = Arrays.copyOfRange(data, WebSocketHeader.MIN_HEADER_LENGTH, messageLength);
+        byte[] actual = new byte[srcBuffer.limit()];
+        srcBuffer.get(actual);
+        assertTrue(Arrays.equals(expected, actual));
+    }
+
+    @Test
     public void testUnwrapBuffer_short_message()
     {
         WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();

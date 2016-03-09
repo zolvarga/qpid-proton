@@ -262,6 +262,10 @@ public class WebSocketHandlerImpl implements WebSocketHandler
                 {
                     retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_PING;
                 }
+                else if (opcode == WebSocketHeader.OPCODE_CLOSE)
+                {
+                    retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_CLOSE;
+                }
                 else
                 {
                     retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID;
