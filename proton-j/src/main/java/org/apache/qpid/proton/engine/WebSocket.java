@@ -34,19 +34,33 @@ public interface WebSocket
 {
     public enum WebSocketState
     {
-        /** WebSocket */
+        /**
+         * WebSocket
+         */
         PN_WS_NOT_STARTED,
-        /** Pending connection */
+        /**
+         * Pending connection
+         */
         PN_WS_CONNECTING,
-        /** Connected and messages flow */
+        /**
+         * Connected and messages flow
+         */
         PN_WS_CONNECTED_FLOW,
-        /** Connected and ping-pong */
+        /**
+         * Connected and ping-pong
+         */
         PN_WS_CONNECTED_PONG,
-        /** Connected and received a close */
+        /**
+         * Connected and received a close
+         */
         PN_WS_CONNECTED_CLOSING,
-        /** Connection closed */
+        /**
+         * Connection closed
+         */
         PN_WS_CLOSED,
-        /** Connection failed */
+        /**
+         * Connection failed
+         */
         PN_WS_FAILED
     }
 

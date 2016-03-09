@@ -9,7 +9,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
 
-public class WebSocketUpgrade {
+public class WebSocketUpgrade
+{
     public static final String RFC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
     private final char _colon = ':';
     private final char _slash = '/';
@@ -20,12 +21,7 @@ public class WebSocketUpgrade {
     private String _webSocketKey = "";
     private Map<String, String> _additionalHeaders = null;
 
-    public WebSocketUpgrade(
-            String hostName,
-            String webSocketPath,
-            int webSocketPort,
-            String webSocketProtocol,
-            Map<String, String> additionalHeaders)
+    public WebSocketUpgrade(String hostName, String webSocketPath, int webSocketPort, String webSocketProtocol, Map<String, String> additionalHeaders)
     {
         setHost(hostName);
         setPath(webSocketPath);
@@ -39,7 +35,8 @@ public class WebSocketUpgrade {
      *
      * @param host The host header field value.
      */
-    public void setHost(String host) {
+    public void setHost(String host)
+    {
         this._host = host;
     }
 
@@ -48,10 +45,12 @@ public class WebSocketUpgrade {
      *
      * @param port The port header field value.
      */
-    public void setPort(int port) {
+    public void setPort(int port)
+    {
         this._port = "";
 
-        if (port != 0) {
+        if (port != 0)
+        {
             this._port = String.valueOf(port);
         }
     }
@@ -61,11 +60,14 @@ public class WebSocketUpgrade {
      *
      * @param path The path field value.
      */
-    public void setPath(String path) {
+    public void setPath(String path)
+    {
         this._path = path;
 
-        if (!this._path.isEmpty()) {
-            if (this._path.charAt(0) != this._slash) {
+        if (!this._path.isEmpty())
+        {
+            if (this._path.charAt(0) != this._slash)
+            {
                 this._path = this._slash + this._path;
             }
         }
@@ -76,64 +78,66 @@ public class WebSocketUpgrade {
      *
      * @param protocol The protocol header field value.
      */
-    public void setProtocol(String protocol) {
+    public void setProtocol(String protocol)
+    {
         this._protocol = protocol;
     }
 
     /**
      * Add field-value pairs to HTTP header
      *
-     * @param additionalHeaders  The Map containing the additional headers.
+     * @param additionalHeaders The Map containing the additional headers.
      */
-    public void setAdditionalHeaders(Map<String, String> additionalHeaders) {
+    public void setAdditionalHeaders(Map<String, String> additionalHeaders)
+    {
         _additionalHeaders = additionalHeaders;
     }
 
     /**
      * Utility function to clear all additional headers
      */
-    public void clearAdditionalHeaders() {
+    public void clearAdditionalHeaders()
+    {
         _additionalHeaders.clear();
     }
 
     /**
      * Utility function to create random, Base64 encoded key
      */
-    private String createWebSocketKey() {
+    private String createWebSocketKey()
+    {
         byte[] key = new byte[16];
 
-        for (int i = 0; i < 16; i++) {
+        for (int i = 0; i < 16; i++)
+        {
             key[i] = (byte) (int) (Math.random() * 256);
         }
 
         return Base64.getEncoder().encodeToString(key).trim();
     }
 
-    public String createUpgradeRequest() {
-        if (this._host.isEmpty()) {
+    public String createUpgradeRequest()
+    {
+        if (this._host.isEmpty())
+        {
             throw new InvalidParameterException("host header has no value");
         }
 
-        if (this._protocol.isEmpty()) {
+        if (this._protocol.isEmpty())
+        {
             throw new InvalidParameterException("protocol header has no value");
         }
 
         this._webSocketKey = createWebSocketKey();
 
         String _endOfLine = "\r\n";
-        StringBuilder stringBuilder = new StringBuilder()
-                .append("GET ").append(this._path).append(" HTTP/1.1").append(_endOfLine)
-                .append("Connection: Upgrade").append(_endOfLine)
-                .append("Upgrade: websocket").append(_endOfLine)
-                .append("Sec-WebSocket-Version: 13").append(_endOfLine)
-                .append("Sec-WebSocket-Key: ").append(this._webSocketKey).append(_endOfLine)
-                .append("Sec-WebSocket-Protocol: ").append(this._protocol).append(_endOfLine)
-                .append("Host: ").append(this._host + this._colon + this._port).append(_endOfLine);
+        StringBuilder stringBuilder = new StringBuilder().append("GET ").append(this._path).append(" HTTP/1.1").append(_endOfLine).append("Connection: Upgrade").append(_endOfLine).append("Upgrade: websocket").append(_endOfLine).append("Sec-WebSocket-Version: 13").append(_endOfLine).append("Sec-WebSocket-Key: ").append(this._webSocketKey).append(_endOfLine).append("Sec-WebSocket-Protocol: ").append(this._protocol).append(_endOfLine).append("Host: ").append(this._host + this._colon + this._port).append(_endOfLine);
 
-        if (_additionalHeaders != null) {
-            for (Map.Entry<String, String> entry : _additionalHeaders.entrySet()) {
-                stringBuilder.append(entry.getKey() + ": " + entry.getValue())
-                             .append(_endOfLine);
+        if (_additionalHeaders != null)
+        {
+            for (Map.Entry<String, String> entry : _additionalHeaders.entrySet())
+            {
+                stringBuilder.append(entry.getKey() + ": " + entry.getValue()).append(_endOfLine);
             }
         }
 
@@ -142,7 +146,8 @@ public class WebSocketUpgrade {
         return stringBuilder.toString();
     }
 
-    public Boolean validateUpgradeReply(byte[] responseBytes) {
+    public Boolean validateUpgradeReply(byte[] responseBytes)
+    {
         String httpString = new String(responseBytes, StandardCharsets.UTF_8);
 
         Boolean isStatusLineOk = false;
@@ -153,51 +158,57 @@ public class WebSocketUpgrade {
 
         Scanner scanner = new Scanner(httpString);
 
-        while (scanner.hasNextLine()) {
+        while (scanner.hasNextLine())
+        {
             String line = scanner.nextLine();
 
             if ((line.toLowerCase().contains("http/1.1")) &&
                     (line.contains("101")) &&
-                    (line.toLowerCase().contains("switching protocols"))) {
+                    (line.toLowerCase().contains("switching protocols")))
+            {
                 isStatusLineOk = true;
 
                 continue;
             }
 
-            if ((line.toLowerCase().contains("upgrade")) &&
-                    (line.toLowerCase().contains("websocket"))) {
+            if ((line.toLowerCase().contains("upgrade")) && (line.toLowerCase().contains("websocket")))
+            {
                 isUpgradeHeaderOk = true;
 
                 continue;
             }
 
-            if ((line.toLowerCase().contains("connection")) &&
-                    (line.toLowerCase().contains("upgrade"))) {
+            if ((line.toLowerCase().contains("connection")) && (line.toLowerCase().contains("upgrade")))
+            {
                 isConnectionHeaderOk = true;
 
                 continue;
             }
 
-            if (line.toLowerCase().contains("sec-websocket-protocol") &&
-                    (line.toLowerCase().contains(this._protocol.toLowerCase()))) {
+            if (line.toLowerCase().contains("sec-websocket-protocol") && (line.toLowerCase().contains(this._protocol.toLowerCase())))
+            {
                 isProtocolHeaderOk = true;
 
                 continue;
             }
 
-            if (line.toLowerCase().contains("sec-websocket-accept")) {
+            if (line.toLowerCase().contains("sec-websocket-accept"))
+            {
                 MessageDigest messageDigest = null;
 
-                try {
+                try
+                {
                     messageDigest = MessageDigest.getInstance("SHA-1");
-                } catch (NoSuchAlgorithmException e) {
+                } catch (NoSuchAlgorithmException e)
+                {
                     // can't happen since SHA-1 is a known digest
                     break;
                 }
 
                 String expectedKey = Base64.getEncoder().encodeToString(messageDigest.digest((this._webSocketKey + RFC_GUID).getBytes()));
 
-                if (line.contains(expectedKey)) {
+                if (line.contains(expectedKey))
+                {
                     isAcceptHeaderOk = true;
                 }
 
@@ -208,27 +219,29 @@ public class WebSocketUpgrade {
         scanner.close();
 
         if ((isStatusLineOk) && (isUpgradeHeaderOk) && (isConnectionHeaderOk) &&
-                (isProtocolHeaderOk) && (isAcceptHeaderOk)) {
+                (isProtocolHeaderOk) && (isAcceptHeaderOk))
+        {
             return true;
-        } else {
+        }
+        else
+        {
             return false;
         }
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder builder = new StringBuilder();
-        builder.append("WebSocketUpgrade [host=").append(_host).append(", path=")
-               .append(_path).append(", port=").append(_port)
-               .append(", protocol=").append(_protocol).append(", webSocketKey=")
-               .append(_webSocketKey);
+        builder.append("WebSocketUpgrade [host=").append(_host).append(", path=").append(_path).append(", port=").append(_port).append(", protocol=").append(_protocol).append(", webSocketKey=").append(_webSocketKey);
 
-        if ((_additionalHeaders != null) && (!_additionalHeaders.isEmpty())) {
+        if ((_additionalHeaders != null) && (!_additionalHeaders.isEmpty()))
+        {
             builder.append(", additionalHeaders=");
 
-            for (Map.Entry<String, String> entry : _additionalHeaders.entrySet()) {
-                builder.append(entry.getKey() + ":" + entry.getValue())
-                       .append(", ");
+            for (Map.Entry<String, String> entry : _additionalHeaders.entrySet())
+            {
+                builder.append(entry.getKey() + ":" + entry.getValue()).append(", ");
             }
 
             int lastIndex = builder.lastIndexOf(", ");

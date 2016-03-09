@@ -25,7 +25,8 @@ import org.apache.qpid.proton.engine.WebSocketHeader;
 
 public class WebSocketSniffer extends HandshakeSniffingTransportWrapper<TransportWrapper, TransportWrapper>
 {
-    public WebSocketSniffer(TransportWrapper webSocket, TransportWrapper other) {
+    public WebSocketSniffer(TransportWrapper webSocket, TransportWrapper other)
+    {
         super(webSocket, other);
     }
 
@@ -38,7 +39,8 @@ public class WebSocketSniffer extends HandshakeSniffingTransportWrapper<Transpor
     @Override
     protected void makeDetermination(byte[] bytes)
     {
-        if (bytes.length < bufferSize()) {
+        if (bytes.length < bufferSize())
+        {
             throw new IllegalArgumentException("insufficient bytes");
         }
 

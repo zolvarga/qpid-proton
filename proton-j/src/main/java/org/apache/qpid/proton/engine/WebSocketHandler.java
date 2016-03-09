@@ -37,14 +37,13 @@ public interface WebSocketHandler
         WEB_SOCKET_MESSAGE_TYPE_INVALID
     }
 
-    String createUpgradeRequest(
-            String hostName,
-            String webSocketPath,
-            int webSocketPort,
-            String webSocketProtocol,
-            Map<String, String> additionalHeaders);
+    String createUpgradeRequest(String hostName, String webSocketPath, int webSocketPort, String webSocketProtocol, Map<String, String> additionalHeaders);
+
     Boolean validateUpgradeReply(ByteBuffer buffer);
+
     void wrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer);
+
     WebSocketMessageType unwrapBuffer(ByteBuffer srcBuffer);
+
     void createPong(ByteBuffer srcBuffer, ByteBuffer dstBuffer);
 }

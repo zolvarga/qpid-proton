@@ -64,14 +64,7 @@ public class WebSocketImpl implements WebSocket
         _isWebSocketEnabled = false;
     }
 
-    public void configure(
-            String host,
-            String path,
-            int port,
-            String protocol,
-            Map<String, String> additionalHeaders,
-            WebSocketHandler webSocketHandler
-    )
+    public void configure(String host, String path, int port, String protocol, Map<String, String> additionalHeaders, WebSocketHandler webSocketHandler)
     {
         _host = host;
         _path = path;
@@ -79,7 +72,8 @@ public class WebSocketImpl implements WebSocket
         _protocol = protocol;
         _additionalHeaders = additionalHeaders;
 
-        if (webSocketHandler != null) {
+        if (webSocketHandler != null)
+        {
             _webSocketHandler = webSocketHandler;
         }
         else
@@ -127,7 +121,8 @@ public class WebSocketImpl implements WebSocket
     }
 
     @Override
-    public void wrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer) {
+    public void wrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer)
+    {
         if (_isWebSocketEnabled)
         {
             _webSocketHandler.wrapBuffer(srcBuffer, dstBuffer);
@@ -140,7 +135,8 @@ public class WebSocketImpl implements WebSocket
     }
 
     @Override
-    public WebSocketHandler.WebSocketMessageType unwrapBuffer(ByteBuffer buffer) {
+    public WebSocketHandler.WebSocketMessageType unwrapBuffer(ByteBuffer buffer)
+    {
         if (_isWebSocketEnabled)
         {
             return _webSocketHandler.unwrapBuffer(buffer);
@@ -191,20 +187,15 @@ public class WebSocketImpl implements WebSocket
     public String toString()
     {
         StringBuilder builder = new StringBuilder();
-        builder
-                .append("WebSocketImpl [isWebSocketEnabled=").append(_isWebSocketEnabled)
-                .append(", state=").append(_state)
-                .append(", protocol=").append(_protocol)
-                .append(", host=").append(_host)
-                .append(", path=").append(_path)
-                .append(", port=").append(_port);
+        builder.append("WebSocketImpl [isWebSocketEnabled=").append(_isWebSocketEnabled).append(", state=").append(_state).append(", protocol=").append(_protocol).append(", host=").append(_host).append(", path=").append(_path).append(", port=").append(_port);
 
-        if ((_additionalHeaders != null) && (!_additionalHeaders.isEmpty())) {
+        if ((_additionalHeaders != null) && (!_additionalHeaders.isEmpty()))
+        {
             builder.append(", additionalHeaders=");
 
-            for (Map.Entry<String, String> entry : _additionalHeaders.entrySet()) {
-                builder.append(entry.getKey() + ":" + entry.getValue())
-                        .append(", ");
+            for (Map.Entry<String, String> entry : _additionalHeaders.entrySet())
+            {
+                builder.append(entry.getKey() + ":" + entry.getValue()).append(", ");
             }
 
             int lastIndex = builder.lastIndexOf(", ");
@@ -213,7 +204,8 @@ public class WebSocketImpl implements WebSocket
 
         builder.append("]");
 
-        return builder.toString();    }
+        return builder.toString();
+    }
 
     private class WebSocketTransportWrapper implements TransportWrapper
     {
@@ -231,7 +223,8 @@ public class WebSocketImpl implements WebSocket
 
         private void processInput() throws TransportException
         {
-            switch (_state) {
+            switch (_state)
+            {
                 case PN_WS_CONNECTING:
                     if (_webSocketHandler.validateUpgradeReply(_inputBuffer))
                     {
@@ -490,7 +483,8 @@ public class WebSocketImpl implements WebSocket
         {
             if (_isWebSocketEnabled)
             {
-                switch (_state) {
+                switch (_state)
+                {
                     case PN_WS_CONNECTING:
                     case PN_WS_CONNECTED_FLOW:
                     case PN_WS_CONNECTED_PONG:
