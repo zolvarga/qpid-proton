@@ -349,100 +349,6 @@ public class WebSocketUpgradeTest
     }
 
     @Test
-    public void testCreateUpgradeRequest_path_start_with_slashes()
-    {
-        String hostName = "host_XXX";
-        String webSocketPath = "///path1/path2";
-        int webSocketPort = 1234567890;
-        String webSocketProtocol = "subprotocol_name";
-
-        WebSocketUpgrade webSocketUpgrade = new WebSocketUpgrade(
-                hostName,
-                webSocketPath,
-                webSocketPort,
-                webSocketProtocol,
-                null
-        );
-
-        String actual = webSocketUpgrade.createUpgradeRequest();
-
-        Boolean isLineCountOk = false;
-        Boolean isStatusLineOk = false;
-        Boolean isUpgradeHeaderOk = false;
-        Boolean isConnectionHeaderOk = false;
-        Boolean isWebSocketVersionHeaderOk = false;
-        Boolean isWebSocketKeyHeaderOk = false;
-        Boolean isWebSocketProtocolHeaderOk = false;
-        Boolean isHostHeaderOk = false;
-
-        Scanner scanner = new Scanner(actual);
-
-        int lineCount = 0;
-        while (scanner.hasNextLine())
-        {
-            lineCount++;
-
-            String line = scanner.nextLine();
-            if (line.equals("GET /path1/path2 HTTP/1.1"))
-            {
-                isStatusLineOk = true;
-                continue;
-            }
-            if (line.equals("Connection: Upgrade"))
-            {
-                isConnectionHeaderOk = true;
-                continue;
-            }
-            if (line.equals("Upgrade: websocket"))
-            {
-                isUpgradeHeaderOk = true;
-                continue;
-            }
-            if (line.equals("Sec-WebSocket-Version: 13"))
-            {
-                isWebSocketVersionHeaderOk = true;
-                continue;
-            }
-            if (line.startsWith("Sec-WebSocket-Key: "))
-            {
-                String keyBase64 = line.substring(19);
-                if (keyBase64.length() == 24)
-                {
-                    byte[] decoded = Base64.getDecoder().decode(keyBase64);
-                    if (decoded.length == 16)
-                    {
-                        isWebSocketKeyHeaderOk = true;
-                    }
-                }
-                continue;
-            }
-            if (line.equals("Sec-WebSocket-Protocol: " + webSocketProtocol))
-            {
-                isWebSocketProtocolHeaderOk = true;
-                continue;
-            }
-            if (line.equals("Host: host_XXX:1234567890"))
-            {
-                isHostHeaderOk = true;
-                continue;
-            }
-        }
-        if (lineCount == 8)
-        {
-            isLineCountOk = true;
-        }
-
-        assertTrue(isLineCountOk);
-        assertTrue(isStatusLineOk);
-        assertTrue(isUpgradeHeaderOk);
-        assertTrue(isConnectionHeaderOk);
-        assertTrue(isWebSocketVersionHeaderOk);
-        assertTrue(isWebSocketKeyHeaderOk);
-        assertTrue(isWebSocketProtocolHeaderOk);
-        assertTrue(isHostHeaderOk);
-    }
-
-    @Test
     public void testCreateUpgradeRequest_clear_additonal_headers()
     {
         String hostName = "host_XXX";
@@ -941,8 +847,8 @@ public class WebSocketUpgradeTest
         String actual = webSocketUpgrade.toString();
 
         String expexted1 =
-                "WebSocketImpl [host=" + hostName +
-                ", path=" + webSocketPath +
+                "WebSocketUpgrade [host=" + hostName +
+                ", path=/" + webSocketPath +
                 ", port=" + webSocketPort +
                 ", protocol=" + webSocketProtocol +
                 ", webSocketKey=";
@@ -971,8 +877,8 @@ public class WebSocketUpgradeTest
         );
 
         String expexted =
-                "WebSocketImpl [host=" + hostName +
-                ", path=" + webSocketPath +
+                "WebSocketUpgrade [host=" + hostName +
+                ", path=/" + webSocketPath +
                 ", port=" + webSocketPort +
                 ", protocol=" + webSocketProtocol +
                 ", webSocketKey=]";

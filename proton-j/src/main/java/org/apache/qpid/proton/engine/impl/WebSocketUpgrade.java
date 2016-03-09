@@ -218,7 +218,7 @@ public class WebSocketUpgrade {
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder();
-        builder.append("WebSocketImpl [host=").append(_host).append(", path=")
+        builder.append("WebSocketUpgrade [host=").append(_host).append(", path=")
                .append(_path).append(", port=").append(_port)
                .append(", protocol=").append(_protocol).append(", webSocketKey=")
                .append(_webSocketKey);

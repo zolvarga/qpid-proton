@@ -202,8 +202,21 @@ public class WebSocketImpl implements WebSocket
                 .append(", protocol=").append(_protocol)
                 .append(", host=").append(_host)
                 .append(", path=").append(_path)
-                .append(", port=").append(_port)
-                .append("]");
+                .append(", port=").append(_port);
+
+        if ((_additionalHeaders != null) && (!_additionalHeaders.isEmpty())) {
+            builder.append(", additionalHeaders=");
+
+            for (Map.Entry<String, String> entry : _additionalHeaders.entrySet()) {
+                builder.append(entry.getKey() + ":" + entry.getValue())
+                        .append(", ");
+            }
+
+            int lastIndex = builder.lastIndexOf(", ");
+            builder.delete(lastIndex, lastIndex + 2);
+        }
+
+        builder.append("]");
 
         return builder.toString();    }
 
@@ -447,9 +460,8 @@ public class WebSocketImpl implements WebSocket
                             return _outputBuffer.position();
                         }
                     case PN_WS_FAILED:
-                        return Transport.END_OF_STREAM;
                     default:
-                        return 0;
+                        return Transport.END_OF_STREAM;
                 }
             }
             else
