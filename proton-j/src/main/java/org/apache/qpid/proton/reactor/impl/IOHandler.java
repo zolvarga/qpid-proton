@@ -108,6 +108,11 @@ public class IOHandler extends BaseHandler {
         Transport transport = event.getConnection().getTransport();
         Socket socket = null;   // In this case, 'null' is the proton-j equivalent of PN_INVALID_SOCKET
         try {
+//            SocketChannel socketChannel = ((ReactorImpl)reactor).getIO().proxiedSocketChannel(null);
+//            socketChannel.configureBlocking(true);
+//            socketChannel.connect(new InetSocketAddress(hostname, port));
+//            socket = socketChannel.socket();
+
             SocketChannel socketChannel = ((ReactorImpl)reactor).getIO().socketChannel();
             socketChannel.configureBlocking(false);
             socketChannel.connect(new InetSocketAddress(hostname, port));

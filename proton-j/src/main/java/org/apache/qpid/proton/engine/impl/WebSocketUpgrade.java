@@ -191,12 +191,11 @@ public class WebSocketUpgrade {
                 try {
                     messageDigest = MessageDigest.getInstance("SHA-1");
                 } catch (NoSuchAlgorithmException e) {
+                    // can't happen since SHA-1 is a known digest
                     break;
                 }
 
-                String expectedKey = Base64.getEncoder()
-                                           .encodeToString(messageDigest.digest(
-                            (this._webSocketKey + RFC_GUID).getBytes()));
+                String expectedKey = Base64.getEncoder().encodeToString(messageDigest.digest((this._webSocketKey + RFC_GUID).getBytes()));
 
                 if (line.contains(expectedKey)) {
                     isAcceptHeaderOk = true;

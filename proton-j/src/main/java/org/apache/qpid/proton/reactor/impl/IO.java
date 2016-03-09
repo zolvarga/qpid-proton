@@ -22,6 +22,7 @@
 package org.apache.qpid.proton.reactor.impl;
 
 import java.io.IOException;
+import java.net.Proxy;
 import java.nio.channels.Pipe;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -41,4 +42,6 @@ public interface IO {
     ServerSocketChannel serverSocketChannel() throws IOException;
 
     SocketChannel socketChannel() throws IOException;
+
+//    ProxiedSocketChannel proxiedSocketChannel(Proxy proxy) throws IOException;
 }

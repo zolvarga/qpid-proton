@@ -92,7 +92,7 @@ public class WebSocketImpl implements WebSocket
         _isWebSocketEnabled = true;
     }
 
-    private void writeUpgradeRequest()
+    protected void writeUpgradeRequest()
     {
         _outputBuffer.clear();
         String request = _webSocketHandler.createUpgradeRequest(_host, _path, _port, _protocol, _additionalHeaders);
@@ -109,7 +109,7 @@ public class WebSocketImpl implements WebSocket
         }
     }
 
-    private void writePong()
+    protected void writePong()
     {
         _webSocketHandler.createPong(_pingBuffer, _outputBuffer);
 
@@ -139,6 +139,7 @@ public class WebSocketImpl implements WebSocket
         }
         else
         {
+            dstBuffer.clear();
             dstBuffer.put(srcBuffer);
         }
     }
@@ -164,13 +165,13 @@ public class WebSocketImpl implements WebSocket
     @Override
     public ByteBuffer getOutputBuffer()
     {
-        return _outputBuffer.asReadOnlyBuffer();
+        return _outputBuffer;
     }
 
     @Override
     public ByteBuffer getInputBuffer()
     {
-        return _inputBuffer.asReadOnlyBuffer();
+        return _inputBuffer;
     }
 
     @Override
@@ -433,13 +434,20 @@ public class WebSocketImpl implements WebSocket
                     case PN_WS_CONNECTED_FLOW:
                         _underlyingOutputSize = _underlyingOutput.pending();
 
-                        wrapBuffer(_underlyingOutput.head(), _outputBuffer);
+                        if (_underlyingOutputSize > 0)
+                        {
+                            wrapBuffer(_underlyingOutput.head(), _outputBuffer);
 
-                        _webSocketHeaderSize = _outputBuffer.position() - _underlyingOutputSize;
+                            _webSocketHeaderSize = _outputBuffer.position() - _underlyingOutputSize;
 
-                        _head.limit(_outputBuffer.position());
+                            _head.limit(_outputBuffer.position());
 
-                        return _outputBuffer.position();
+                            return _outputBuffer.position();
+                        }
+                        else
+                        {
+                            return _underlyingOutputSize;
+                        }
                     case PN_WS_CONNECTED_PONG:
                         _state = WebSocketState.PN_WS_CONNECTED_FLOW;
 
