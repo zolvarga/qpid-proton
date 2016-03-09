@@ -177,7 +177,7 @@ public class WebSocketImpl implements WebSocket
     @Override
     public ByteBuffer getPingBuffer()
     {
-        return _pingBuffer.asReadOnlyBuffer();
+        return _pingBuffer;
     }
 
     @Override
@@ -224,18 +224,12 @@ public class WebSocketImpl implements WebSocket
         private void processInput() throws TransportException
         {
             switch (_state) {
-                case PN_WS_NOT_STARTED:
-                    break;
                 case PN_WS_CONNECTING:
                     if (_webSocketHandler.validateUpgradeReply(_inputBuffer))
                     {
                         _state = WebSocketState.PN_WS_CONNECTED_FLOW;
                     }
-
-                    if (_logger.isLoggable(Level.FINER))
-                    {
-                        _logger.log(Level.FINER, WebSocketImpl.this + " about to call plain input");
-                    }
+                    _inputBuffer.compact();
                     break;
                 case PN_WS_CONNECTED_FLOW:
                 case PN_WS_CONNECTED_PONG:
@@ -257,13 +251,14 @@ public class WebSocketImpl implements WebSocket
 
                         switch (unwrapBuffer(_inputBuffer))
                         {
-                            case WEB_SOCKET_MESSAGE_TYPE_EMPTY:
                             case WEB_SOCKET_MESSAGE_TYPE_AMQP:
+                            case WEB_SOCKET_MESSAGE_TYPE_EMPTY:
+                            case WEB_SOCKET_MESSAGE_TYPE_INVALID:
                             case WEB_SOCKET_MESSAGE_TYPE_INVALID_MASKED:
                             case WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH:
-                            case WEB_SOCKET_MESSAGE_TYPE_INVALID:
                                 int bytes = pourAll(_inputBuffer, _underlyingInput);
-                                if (bytes == Transport.END_OF_STREAM) {
+                                if (bytes == Transport.END_OF_STREAM)
+                                {
                                     _tail_closed = true;
                                 }
                                 _inputBuffer.compact();
@@ -277,10 +272,9 @@ public class WebSocketImpl implements WebSocket
                         }
                     }
                     break;
+                case PN_WS_NOT_STARTED:
                 case PN_WS_CLOSED:
-                    break;
                 case PN_WS_FAILED:
-                    break;
                 default:
                     break;
             }
@@ -348,24 +342,12 @@ public class WebSocketImpl implements WebSocket
 
                 switch (_state)
                 {
-                    case PN_WS_NOT_STARTED:
-                        _underlyingInput.process();
-                        break;
                     case PN_WS_CONNECTING:
-                        try
-                        {
-                            processInput();
-                        } finally
-                        {
-                            _inputBuffer.compact();
-                        }
-                        break;
                     case PN_WS_CONNECTED_FLOW:
                         processInput();
                         break;
+                    case PN_WS_NOT_STARTED:
                     case PN_WS_FAILED:
-                        _underlyingInput.process();
-                        break;
                     default:
                         _underlyingInput.process();
                 }

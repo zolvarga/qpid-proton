@@ -26,7 +26,7 @@ import java.util.Map;
 
 public interface WebSocketHandler
 {
-    enum WebSocketMessageType
+    public enum WebSocketMessageType
     {
         WEB_SOCKET_MESSAGE_TYPE_EMPTY,
         WEB_SOCKET_MESSAGE_TYPE_AMQP,
