@@ -28,14 +28,11 @@ import org.apache.qpid.proton.engine.WebSocket;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
-import java.util.logging.Logger;
 
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.*;
 
 public class WebSocketImpl implements WebSocket
 {
-    private static final Logger _logger = Logger.getLogger(WebSocketImpl.class.getName());
-
     private boolean _tail_closed = false;
     private final ByteBuffer _inputBuffer;
     private boolean _head_closed = false;
@@ -82,30 +79,6 @@ public class WebSocketImpl implements WebSocket
         }
 
         _isWebSocketEnabled = true;
-    }
-
-    protected void writeUpgradeRequest()
-    {
-        _outputBuffer.clear();
-        String request = _webSocketHandler.createUpgradeRequest(_host, _path, _port, _protocol, _additionalHeaders);
-
-        System.out.println("WEBSOCKETIMPL is sending: ");
-        System.out.println(request);
-        System.out.println("***************************************************");
-
-        _outputBuffer.put(request.getBytes());
-    }
-
-    protected void writePong()
-    {
-        _webSocketHandler.createPong(_pingBuffer, _outputBuffer);
-    }
-
-    protected void writeClose()
-    {
-        _outputBuffer.clear();
-        _pingBuffer.flip();
-        _outputBuffer.put(_pingBuffer);
     }
 
     public TransportWrapper wrap(final TransportInput input, final TransportOutput output)
@@ -205,6 +178,30 @@ public class WebSocketImpl implements WebSocket
         builder.append("]");
 
         return builder.toString();
+    }
+
+    protected void writeUpgradeRequest()
+    {
+        _outputBuffer.clear();
+        String request = _webSocketHandler.createUpgradeRequest(_host, _path, _port, _protocol, _additionalHeaders);
+
+        System.out.println("WEBSOCKETIMPL is sending: ");
+        System.out.println(request);
+        System.out.println("***************************************************");
+
+        _outputBuffer.put(request.getBytes());
+    }
+
+    protected void writePong()
+    {
+        _webSocketHandler.createPong(_pingBuffer, _outputBuffer);
+    }
+
+    protected void writeClose()
+    {
+        _outputBuffer.clear();
+        _pingBuffer.flip();
+        _outputBuffer.put(_pingBuffer);
     }
 
     private class WebSocketTransportWrapper implements TransportWrapper

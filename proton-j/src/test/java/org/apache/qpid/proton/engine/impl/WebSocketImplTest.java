@@ -42,6 +42,8 @@ public class WebSocketImplTest
     private String _webSocketProtocol = "subprotocol_name";
     private Map<String, String> _additionalHeaders = new HashMap<String, String>();
 
+    private int _lengthOfUpgradeRequest = 268;
+
     private void init()
     {
         _additionalHeaders.put("header1", "content1");
@@ -115,7 +117,7 @@ public class WebSocketImplTest
         ByteBuffer outputBuffer = webSocketImpl.getOutputBuffer();
         outputBuffer.flip();
 
-        assertTrue(outputBuffer.remaining() == 268);
+        assertTrue(outputBuffer.remaining() == _lengthOfUpgradeRequest);
     }
 
     @Test
@@ -285,7 +287,7 @@ public class WebSocketImplTest
         ByteBuffer outputBuffer = webSocketImpl.getOutputBuffer();
         outputBuffer.flip();
 
-        assertTrue(outputBuffer.remaining() == 268);
+        assertTrue(outputBuffer.remaining() == _lengthOfUpgradeRequest);
     }
 
     @Test
@@ -333,7 +335,7 @@ public class WebSocketImplTest
         ByteBuffer outputBuffer = webSocketImpl.getOutputBuffer();
         outputBuffer.flip();
 
-        assertTrue(outputBuffer.remaining() == 268);
+        assertTrue(outputBuffer.remaining() == _lengthOfUpgradeRequest);
     }
 
     @Test
@@ -361,7 +363,7 @@ public class WebSocketImplTest
         outputBuffer.flip();
 
         transportWrapper.pending();
-        assertTrue(outputBuffer.remaining() == 268);
+        assertTrue(outputBuffer.remaining() == _lengthOfUpgradeRequest);
     }
 
     @Test

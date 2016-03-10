@@ -34,11 +34,6 @@ public class WebSocketHandlerImpl implements WebSocketHandler
 {
     private WebSocketUpgrade _webSocketUpgrade = null;
 
-    protected WebSocketUpgrade createWebSocketUpgrade(String hostName, String webSocketPath, int webSocketPort, String webSocketProtocol, Map<String, String> additionalHeaders)
-    {
-        return new WebSocketUpgrade(hostName, webSocketPath, webSocketPort, webSocketProtocol, additionalHeaders);
-    }
-
     @Override
     public String createUpgradeRequest(String hostName, String webSocketPath, int webSocketPort, String webSocketProtocol, Map<String, String> additionalHeaders)
     {
@@ -109,7 +104,6 @@ public class WebSocketHandlerImpl implements WebSocketHandler
         {
             // We always send masked data
             // RFC: "client MUST mask all frames that it sends to the server"
-            //            final byte MASKBIT_SET = (byte) 0x80;
             final byte[] MASKING_KEY = createRandomMaskingKey();
 
             // Get data length
@@ -146,13 +140,12 @@ public class WebSocketHandlerImpl implements WebSocketHandler
                 webSocketFrame.write((byte) (DATA_LENGTH));
             }
             // RFC: If 127, the following 8 bytes interpreted as a 64-bit unsigned integer (the most significant bit MUST be 0) are the payload length.
-            // No need for "else if" because if it is longer than what 8 byte length can hold... or bets are off anyway
+            // No need for "else if" because if it is longer than what 8 byte length can hold... all bets are off anyway
             else
             {
                 secondByte = (byte) (secondByte | WebSocketHeader.PAYLOAD_EXTENDED_64);
                 webSocketFrame.write(secondByte);
 
-                // Create the least significant 4 bytes
                 webSocketFrame.write((byte) (DATA_LENGTH >>> 56));
                 webSocketFrame.write((byte) (DATA_LENGTH >>> 48));
                 webSocketFrame.write((byte) (DATA_LENGTH >>> 40));
@@ -274,6 +267,11 @@ public class WebSocketHandlerImpl implements WebSocketHandler
         }
 
         return retVal;
+    }
+
+    protected WebSocketUpgrade createWebSocketUpgrade(String hostName, String webSocketPath, int webSocketPort, String webSocketProtocol, Map<String, String> additionalHeaders)
+    {
+        return new WebSocketUpgrade(hostName, webSocketPath, webSocketPort, webSocketProtocol, additionalHeaders);
     }
 
     protected byte[] createRandomMaskingKey()
