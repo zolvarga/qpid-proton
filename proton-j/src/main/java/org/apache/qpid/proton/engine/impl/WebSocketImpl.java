@@ -33,6 +33,7 @@ import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.*;
 
 public class WebSocketImpl implements WebSocket
 {
+    private int _maxFrameSize = 5*1024;
     private boolean _tail_closed = false;
     private final ByteBuffer _inputBuffer;
     private boolean _head_closed = false;
@@ -53,11 +54,11 @@ public class WebSocketImpl implements WebSocket
 
     protected Boolean _isWebSocketEnabled = false;
 
-    public WebSocketImpl(int maxFrameSize)
+    public WebSocketImpl()
     {
-        _inputBuffer = newWriteableBuffer(maxFrameSize);
-        _outputBuffer = newWriteableBuffer(maxFrameSize);
-        _pingBuffer = newWriteableBuffer(maxFrameSize);
+        _inputBuffer = newWriteableBuffer(_maxFrameSize);
+        _outputBuffer = newWriteableBuffer(_maxFrameSize);
+        _pingBuffer = newWriteableBuffer(_maxFrameSize);
         _isWebSocketEnabled = false;
     }
 
@@ -420,29 +421,13 @@ public class WebSocketImpl implements WebSocket
 
                         if (_underlyingOutputSize > 0)
                         {
-                            _webSocketHeaderSize = 6;
+                            _webSocketHeaderSize = _webSocketHandler.calculateHeaderSize(_underlyingOutputSize);
                             return _underlyingOutput.pending() + _webSocketHeaderSize;
                         }
                         else
                         {
                             return _underlyingOutputSize;
                         }
-
-
-//                        if (_underlyingOutputSize > 0)
-//                        {
-//                            wrapBuffer(_underlyingOutput.head(), _outputBuffer);
-//
-//                            _webSocketHeaderSize = _outputBuffer.position() - _underlyingOutputSize;
-//
-//                            _head.limit(_outputBuffer.position());
-//
-//                            return _outputBuffer.position();
-//                        }
-//                        else
-//                        {
-//                            return _underlyingOutputSize;
-//                        }
                     case PN_WS_CONNECTED_PONG:
                         _state = WebSocketState.PN_WS_CONNECTED_FLOW;
 
@@ -554,7 +539,6 @@ public class WebSocketImpl implements WebSocket
                             _head.position(0);
                             _head.limit(_outputBuffer.position());
                             _underlyingOutput.pop(bytes - _webSocketHeaderSize);
-                            _webSocketHeaderSize = 0;
                         }
                         else
                         {

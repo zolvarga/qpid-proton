@@ -365,7 +365,7 @@ public class TransportImpl extends EndpointImpl
         if (_webSocketImpl == null)
         {
             init();
-            _webSocketImpl = new WebSocketImpl(_remoteMaxFrameSize);
+            _webSocketImpl = new WebSocketImpl();
             TransportWrapper transportWrapper = _webSocketImpl.wrap(_inputProcessor, _outputProcessor);
             _inputProcessor = transportWrapper;
             _outputProcessor = transportWrapper;
