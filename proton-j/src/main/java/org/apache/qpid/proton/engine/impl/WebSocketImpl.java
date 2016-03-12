@@ -411,7 +411,7 @@ public class WebSocketImpl implements WebSocket
                         }
                         else
                         {
-                            return 0; //_outputBuffer.position();
+                            return _outputBuffer.position();
                         }
                     case PN_WS_CONNECTED_FLOW:
                         _underlyingOutputSize = _underlyingOutput.pending();
