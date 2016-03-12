@@ -21,10 +21,7 @@
 
 package org.apache.qpid.proton.engine.impl;
 
-import org.apache.qpid.proton.engine.WebSocketHandler;
-import org.apache.qpid.proton.engine.Transport;
-import org.apache.qpid.proton.engine.TransportException;
-import org.apache.qpid.proton.engine.WebSocket;
+import org.apache.qpid.proton.engine.*;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -33,7 +30,7 @@ import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.*;
 
 public class WebSocketImpl implements WebSocket
 {
-    private int _maxFrameSize = 5*1024;
+    private int _maxFrameSize = 4*1024 + 16*WebSocketHeader.MED_HEADER_LENGTH_MASKED;
     private boolean _tail_closed = false;
     private final ByteBuffer _inputBuffer;
     private boolean _head_closed = false;
