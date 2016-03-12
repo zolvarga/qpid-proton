@@ -413,25 +413,36 @@ public class WebSocketImpl implements WebSocket
                         }
                         else
                         {
-                            return _outputBuffer.position();
+                            return 0; //_outputBuffer.position();
                         }
                     case PN_WS_CONNECTED_FLOW:
                         _underlyingOutputSize = _underlyingOutput.pending();
 
                         if (_underlyingOutputSize > 0)
                         {
-                            wrapBuffer(_underlyingOutput.head(), _outputBuffer);
-
-                            _webSocketHeaderSize = _outputBuffer.position() - _underlyingOutputSize;
-
-                            _head.limit(_outputBuffer.position());
-
-                            return _outputBuffer.position();
+                            _webSocketHeaderSize = 6;
+                            return _underlyingOutput.pending() + _webSocketHeaderSize;
                         }
                         else
                         {
                             return _underlyingOutputSize;
                         }
+
+
+//                        if (_underlyingOutputSize > 0)
+//                        {
+//                            wrapBuffer(_underlyingOutput.head(), _outputBuffer);
+//
+//                            _webSocketHeaderSize = _outputBuffer.position() - _underlyingOutputSize;
+//
+//                            _head.limit(_outputBuffer.position());
+//
+//                            return _outputBuffer.position();
+//                        }
+//                        else
+//                        {
+//                            return _underlyingOutputSize;
+//                        }
                     case PN_WS_CONNECTED_PONG:
                         _state = WebSocketState.PN_WS_CONNECTED_FLOW;
 
@@ -483,9 +494,20 @@ public class WebSocketImpl implements WebSocket
                 switch (_state)
                 {
                     case PN_WS_CONNECTING:
-                    case PN_WS_CONNECTED_FLOW:
                     case PN_WS_CONNECTED_PONG:
                     case PN_WS_CONNECTED_CLOSING:
+                        return _head;
+                    case PN_WS_CONNECTED_FLOW:
+                        _underlyingOutputSize = _underlyingOutput.pending();
+
+                        if (_underlyingOutputSize > 0)
+                        {
+                            wrapBuffer(_underlyingOutput.head(), _outputBuffer);
+
+                            _webSocketHeaderSize = _outputBuffer.position() - _underlyingOutputSize;
+
+                            _head.limit(_outputBuffer.position());
+                        }
                         return _head;
                     case PN_WS_NOT_STARTED:
                     case PN_WS_CLOSED:
