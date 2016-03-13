@@ -24,18 +24,15 @@ import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.WebSocket;
 import org.apache.qpid.proton.engine.WebSocketHandler;
 import org.apache.qpid.proton.engine.WebSocketHeader;
-
-import static org.junit.Assert.*;
-
 import org.junit.Test;
 
-import static org.mockito.Mockito.*;
-
 import java.nio.ByteBuffer;
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 public class WebSocketImplTest
 {
@@ -45,6 +42,7 @@ public class WebSocketImplTest
     private int _webSocketPort = 1234567890;
     private String _webSocketProtocol = "subprotocol_name";
     private Map<String, String> _additionalHeaders = new HashMap<String, String>();
+
     private int _lengthOfUpgradeRequest = 268;
 
     private void init()
@@ -1671,9 +1669,11 @@ public class WebSocketImplTest
         String actual = webSocketImpl.toString();
 
         String expexted1 = "WebSocketImpl [isWebSocketEnabled=true" +
-                ", state=PN_WS_NOT_STARTED" + ", protocol=" + _webSocketProtocol +
-                ", host=" + _hostName + ", path=" + _webSocketPath + ", port=" +
-                _webSocketPort;
+                ", state=PN_WS_NOT_STARTED" +
+                ", protocol=" + _webSocketProtocol +
+                ", host=" + _hostName +
+                ", path=" + _webSocketPath +
+                ", port=" + _webSocketPort;
 
         String expected2 = ", additionalHeaders=header3:content3, header2:content2, header1:content1]";
 
@@ -1697,9 +1697,11 @@ public class WebSocketImplTest
         String actual = webSocketImpl.toString();
 
         String expexted = "WebSocketImpl [isWebSocketEnabled=true" +
-                ", state=PN_WS_NOT_STARTED" + ", protocol=" + _webSocketProtocol +
-                ", host=" + _hostName + ", path=" + _webSocketPath + ", port=" +
-                _webSocketPort + "]";
+                ", state=PN_WS_NOT_STARTED" +
+                ", protocol=" + _webSocketProtocol +
+                ", host=" + _hostName +
+                ", path=" + _webSocketPath +
+                ", port=" + _webSocketPort + "]";
 
         assertEquals("Unexpected value for toString()", expexted, actual);
     }
