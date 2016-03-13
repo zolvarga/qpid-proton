@@ -17,7 +17,7 @@
 # under the License.
 #
 
-include(${CMAKE_SOURCE_DIR}/cpp.cmake) # Compiler checks
+include(cpp.cmake) # Compiler checks
 
 include_directories(
   "${CMAKE_SOURCE_DIR}/proton-c/include"
@@ -26,6 +26,7 @@ include_directories(
 
 set(qpid-proton-cpp-source
   src/acceptor.cpp
+  src/binary.cpp
   src/scalar.cpp
   src/condition.cpp
   src/connection.cpp
@@ -36,13 +37,13 @@ set(qpid-proton-cpp-source
   src/contexts.cpp
   src/data.cpp
   src/decoder.cpp
+  src/decimal.cpp
   src/delivery.cpp
   src/duration.cpp
   src/encoder.cpp
   src/endpoint.cpp
   src/connection_engine.cpp
   src/error.cpp
-  src/event.cpp
   src/id_generator.cpp
   src/link.cpp
   src/link_options.cpp
@@ -64,8 +65,9 @@ set(qpid-proton-cpp-source
   src/ssl_domain.cpp
   src/task.cpp
   src/terminus.cpp
+  src/timestamp.cpp
   src/transport.cpp
-  src/types.cpp
+  src/type_id.cpp
   src/url.cpp
   src/uuid.cpp
   src/value.cpp
@@ -80,7 +82,7 @@ endif(MSVC)
 set_source_files_properties (
   ${qpid-proton-cpp-source}
   PROPERTIES
-  COMPILE_FLAGS "${CXX_WARNING_FLAGS}"
+  COMPILE_FLAGS "${CXX_WARNING_FLAGS} ${LTO}"
   )
 
 add_library(qpid-proton-cpp SHARED ${qpid-proton-cpp-source})
@@ -93,7 +95,7 @@ set_target_properties (
   LINKER_LANGUAGE CXX
   VERSION   "${PN_LIB_SOMAJOR}.${PN_LIB_SOMINOR}"
   SOVERSION "${PN_LIB_SOMAJOR}"
-  LINK_FLAGS "${CATCH_UNDEFINED}"
+  LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
   )
 
 ## Install
@@ -106,13 +108,9 @@ install(TARGETS qpid-proton-cpp
 
 # Install windows qpid-proton-cpp pdb files
 if (MSVC)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/qpid-proton${CMAKE_DEBUG_POSTFIX}.pdb
+  install(FILES $<TARGET_PDB_FILE:qpid-proton-cpp>
     DESTINATION bin
-    CONFIGURATIONS Debug
-    OPTIONAL)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/RelWithDebInfo/qpid-proton.pdb
-    DESTINATION bin
-    CONFIGURATIONS RelWithDebInfo
+    CONFIGURATIONS RelWithDebInfo Debug
     OPTIONAL)
 endif (MSVC)
 
@@ -139,12 +137,15 @@ set(PROTONCPPLIB ${CMAKE_SHARED_LIBRARY_PREFIX}qpid-proton-cpp${CMAKE_SHARED_LIB
 set(PROTONCPPLIBDEBUG ${CMAKE_SHARED_LIBRARY_PREFIX}qpid-proton-cpp${CMAKE_DEBUG_POSTFIX}${CMAKE_SHARED_LIBRARY_SUFFIX})
 endif ()
 
+include(WriteBasicConfigVersionFile)
+
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/ProtonCppConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfig.cmake @ONLY)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/ProtonCppConfigVersion.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfigVersion.cmake @ONLY)
+write_basic_config_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfigVersion.cmake
+  VERSION ${PN_VERSION}
+  COMPATIBILITY AnyNewerVersion)
 install (FILES
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfig.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfigVersion.cmake
@@ -168,8 +169,9 @@ macro(add_cpp_test test)
   endif ()
 endmacro(add_cpp_test)
 
+add_cpp_test(codec_test)
+add_cpp_test(engine_test)
 add_cpp_test(interop_test ${CMAKE_SOURCE_DIR}/tests)
 add_cpp_test(message_test)
-add_cpp_test(value_test)
 add_cpp_test(scalar_test)
-add_cpp_test(engine_test)
+add_cpp_test(value_test)

@@ -1,5 +1,5 @@
-#ifndef VALUE_H
-#define VALUE_H
+#ifndef PROTON_VALUE_HPP
+#define PROTON_VALUE_HPP
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -20,47 +20,59 @@
  * under the License.
  */
 
-#include "proton/data.hpp"
-#include "proton/types.hpp"
+#include <proton/encoder.hpp>
+#include <proton/decoder.hpp>
+#include <proton/type_traits.hpp>
+#include <proton/types_fwd.hpp>
+
+#include <iosfwd>
 
 namespace proton {
 
-/// A holder for an AMQP value.
+/// A holder for any single AMQP value, simple or complex (can be list, array, map etc.)
 ///
-/// A proton::value can hold any AMQP data value, simple or compound.
-/// It has assignment and conversion operators to convert its contents
-/// easily to and from native C++ types.
-class value : public comparable<value> {
+/// @see proton::amqp for conversions rules between C++ and AMQP types.
+///
+class value : private comparable<value> {
   public:
-    /// Create an empty value.
+    /// Create a null value.
     PN_CPP_EXTERN value();
+    /// Create a null value.
+    PN_CPP_EXTERN value(const null&);
 
     /// Copy a value.
     PN_CPP_EXTERN value(const value&);
-
-#if PN_HAS_CPP11
+    PN_CPP_EXTERN value& operator=(const value&);
+#if PN_CPP_HAS_CPP11
     PN_CPP_EXTERN value(value&&);
+    PN_CPP_EXTERN value& operator=(value&&);
 #endif
 
-    /// Copy a value.
-    PN_CPP_EXTERN value& operator=(const value&);
+    ///@internal
+    PN_CPP_EXTERN explicit value(const codec::data&);
 
-    /// Explicit conversion from from C++ type T.
-    template <class T> explicit value(const T& x) : data_(proton::data::create()) { encode() << x; }
+    /// Construct from any allowed type T. @see proton::amqp for allowed types.
+    template <class T> value(const T& x, typename codec::assignable<T>::type* = 0) {
+        codec::encoder e(*this);
+        e << x;
+    }
+    PN_CPP_EXTERN value& operator=(const null&);
 
-    /// Allow implicit conversion from a proton::scalar.
-    value(const scalar& x) { encode() << x; }
+    /// Assign from any encodable type T. @see proton::amqp for encodable types.
+    template <class T>
+    typename codec::assignable<T, value&>::type operator=(const T& x) {
+        codec::encoder e(*this);
+        e << x;
+        return *this;
+    }
 
-    /// Create a value from C++ type T.
-    template <class T> value& operator=(const T& x) { encode() << x; return *this; }
-
-    /// Remove any contained data.
+    /// Reset the value to null
     PN_CPP_EXTERN void clear();
 
-    /// True if the value contains no data.
+    /// True if the value is null
     PN_CPP_EXTERN bool empty() const;
 
-    /// Get the type of the current value.
+    /// Get the type ID for the current value.
     PN_CPP_EXTERN type_id type() const;
 
     /// @name Get methods
@@ -70,17 +82,9 @@ class value : public comparable<value> {
     /// @{
 
     /// Get the value.
-    template<class T> void get(T &t) const { decode() >> t; }
+    template<class T> void get(T &t) const { codec::decoder d(*this); d >> t; }
 
-    /// Get an AMQP map as any type T that satisfies the map concept.
-    template<class T> void get_map(T& t) const { decode() >> to_map(t); }
-
-    /// Get a map as a as any type T that is a sequence pair-like types with first and second.
-    template<class T> void get_pairs(T& t) const { decode() >> to_pairs(t); }
-
-    /// Get an AMQP array or list as type T that satisfies the sequence concept. */
-    template<class T> void get_sequence(T& t) const { decode() >> to_sequence(t); }
-
+    PN_CPP_EXTERN void get(null&) const;
     /// @}
 
     /// Get the value as C++ type T.
@@ -89,7 +93,7 @@ class value : public comparable<value> {
     /// @name As methods
     ///
     /// As methods do "loose" conversion, they will convert the scalar
-    /// value to the requested type if possible, else throw type_error.
+    /// value to the requested type if possible, else throw conversion_error.
     ///
     /// @{
     PN_CPP_EXTERN int64_t as_int() const;        ///< Allowed if `type_id_is_integral(type())`
@@ -98,27 +102,22 @@ class value : public comparable<value> {
     PN_CPP_EXTERN std::string as_string() const; ///< Allowed if `type_id_is_string_like(type())`
     /// @}
 
-    /// @cond INTERNAL
-    /// XXX undiscussed
-    PN_CPP_EXTERN encoder encode();              ///< Clear and return an encoder for this value.
-    PN_CPP_EXTERN decoder decode() const;        ///< Rewind and return an encoder for this value.
-    PN_CPP_EXTERN class data& data() const;      ///< Return a data reference, no clear or rewind.
-    /// @endcond
+  friend PN_CPP_EXTERN void swap(value&, value&);
+  friend PN_CPP_EXTERN bool operator==(const value& x, const value& y);
+  friend PN_CPP_EXTERN bool operator<(const value& x, const value& y);
+  friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream& o, codec::exact_cref<value>);
 
   private:
-    mutable class data data_;
+    codec::data& data() const;
+    mutable class codec::data data_;
 
-    /// @cond INTERNAL
-    friend PN_CPP_EXTERN void swap(value&, value&);
-    friend PN_CPP_EXTERN bool operator==(const value& x, const value& y);
-    friend PN_CPP_EXTERN bool operator<(const value& x, const value& y);
-    friend PN_CPP_EXTERN class encoder operator<<(class encoder e, const value& dv);
-    friend PN_CPP_EXTERN class decoder operator>>(class decoder d, value& dv);
-    friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream& o, const value& dv);
-    friend class message;
-    /// @endcond
+  friend class message;
+  friend class codec::encoder;
+  friend class codec::decoder;
 };
 
-}
+template<class T> T get(codec::exact_cref<value> v) { T x; v.ref.get(x); return x; }
 
-#endif // VALUE_H
+} // proton
+
+#endif // PROTON_VALUE_HPP

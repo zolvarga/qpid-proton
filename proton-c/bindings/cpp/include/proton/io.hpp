@@ -21,14 +21,17 @@
  */
 
 #include <proton/connection_engine.hpp>
+#include <proton/url.hpp>
 
 namespace proton {
 
-/// IO using sockets, file descriptors, or handles.
-
-/// Note that you can use proton::connection_engine to communicate
-/// using AMQP over your own IO implementation or to integrate an
-/// existing IO framework of your choice.
+/// IO using sockets, file descriptors, or handles, for use with
+/// proton::connection_engine.
+///
+/// Note that you can use proton::connection_engine to communicate using AMQP
+/// over your own IO implementation or to integrate an existing IO framework of
+/// your choice, this implementation is provided as a convenience if sockets is
+/// sufficient for your needs.
 
 namespace io {
 
@@ -64,10 +67,7 @@ struct guard {
 /// An IO resource.
 typedef int64_t descriptor;
 
-/// @cond INTERNAL
-/// don't know what it is
 PN_CPP_EXTERN extern const descriptor INVALID_DESCRIPTOR;
-/// @endcond
 
 /// Return a string describing the most recent IO error.
 PN_CPP_EXTERN std::string error_str();

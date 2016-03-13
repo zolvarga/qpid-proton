@@ -19,18 +19,20 @@
  *
  */
 
-#include "proton/data.hpp"
-#include "proton/message.hpp"
+#include "proton/delivery.hpp"
 #include "proton/error.hpp"
 #include "proton/link.hpp"
-#include "proton/delivery.hpp"
-#include "proton/message.h"
-#include "proton/sender.hpp"
-#include "proton/receiver.hpp"
+#include "proton/message.hpp"
 #include "proton/message_id.hpp"
-#include "proton/delivery.h"
+#include "proton/receiver.hpp"
+#include "proton/sender.hpp"
+#include "proton/timestamp.hpp"
+
+#include "proton/message.h"
+
 #include "msg.hpp"
 #include "proton_bits.hpp"
+#include "types_internal.hpp"
 
 #include <string>
 #include <algorithm>
@@ -41,12 +43,14 @@ namespace proton {
 message::message() : pn_msg_(0) {}
 message::message(const message &m) : pn_msg_(0) { *this = m; }
 
-#if PN_HAS_CPP11
+#if PN_CPP_HAS_CPP11
 message::message(message &&m) : pn_msg_(0) { swap(*this, m); }
 #endif
 
+message::message(const value& x) : pn_msg_(0) { body() = x; }
+
 message::~message() {
-    body_.data_ = data(0);      // Must release body before pn_message_free
+    body_.data_ = codec::data(0);      // Must release body before pn_message_free
     pn_message_free(pn_msg_);
 }
 
@@ -85,25 +89,8 @@ void check(int err) {
 
 void message::id(const message_id& id) { pn_message_set_id(pn_msg(), id.scalar_.atom_); }
 
-namespace {
-inline message_id from_pn_atom(const pn_atom_t& v) {
-  switch (v.type) {
-    case PN_ULONG:
-      return message_id(amqp_ulong(v.u.as_ulong));
-    case PN_UUID:
-      return message_id(amqp_uuid(v.u.as_uuid));
-    case PN_BINARY:
-      return message_id(amqp_binary(v.u.as_bytes));
-    case PN_STRING:
-      return message_id(amqp_string(v.u.as_bytes));
-    default:
-      return message_id();
-  }
-}
-}
-
 message_id message::id() const {
-    return from_pn_atom(pn_message_get_id(pn_msg()));
+    return pn_message_get_id(pn_msg());
 }
 
 void message::user_id(const std::string &id) {
@@ -142,11 +129,12 @@ std::string message::reply_to() const {
 }
 
 void message::correlation_id(const message_id& id) {
-    data(pn_message_correlation_id(pn_msg())).copy(id.scalar_);
+    codec::encoder e(pn_message_correlation_id(pn_msg()));
+    e << id.scalar_;
 }
 
 message_id message::correlation_id() const {
-    return from_pn_atom(pn_message_get_correlation_id(pn_msg()));
+    return pn_message_get_correlation_id(pn_msg());
 }
 
 void message::content_type(const std::string &s) {
@@ -167,18 +155,18 @@ std::string message::content_encoding() const {
     return s ? std::string(s) : std::string();
 }
 
-void message::expiry_time(amqp_timestamp t) {
-    pn_message_set_expiry_time(pn_msg(), t.milliseconds);
+void message::expiry_time(timestamp t) {
+    pn_message_set_expiry_time(pn_msg(), t.ms());
 }
-amqp_timestamp message::expiry_time() const {
-    return amqp_timestamp(pn_message_get_expiry_time(pn_msg()));
+timestamp message::expiry_time() const {
+    return timestamp(pn_message_get_expiry_time(pn_msg()));
 }
 
-void message::creation_time(amqp_timestamp t) {
-    pn_message_set_creation_time(pn_msg(), t);
+void message::creation_time(timestamp t) {
+    pn_message_set_creation_time(pn_msg(), t.ms());
 }
-amqp_timestamp message::creation_time() const {
-    return pn_message_get_creation_time(pn_msg());
+timestamp message::creation_time() const {
+    return timestamp(pn_message_get_creation_time(pn_msg()));
 }
 
 void message::group_id(const std::string &s) {
@@ -203,6 +191,8 @@ bool message::inferred() const { return pn_message_is_inferred(pn_msg()); }
 
 void message::inferred(bool b) { pn_message_set_inferred(pn_msg(), b); }
 
+void message::body(const value& x) { body() = x; }
+
 const value& message::body() const { pn_msg(); return body_; }
 value& message::body() { pn_msg(); return body_; }
 
@@ -213,9 +203,10 @@ value& message::body() { pn_msg(); return body_; }
 
 // Decode a map on demand
 template<class M> M& get_map(pn_message_t* msg, pn_data_t* (*get)(pn_message_t*), M& map) {
-    data d(get(msg));
+    codec::decoder d(get(msg));
     if (map.empty() && !d.empty()) {
-        d.decoder() >> rewind() >> map;
+        d.rewind();
+        d >> map;
         d.clear();              // The map member is now the authority.
     }
     return map;
@@ -223,10 +214,10 @@ template<class M> M& get_map(pn_message_t* msg, pn_data_t* (*get)(pn_message_t*)
 
 // Encode a map if necessary.
 template<class M> M& put_map(pn_message_t* msg, pn_data_t* (*get)(pn_message_t*), M& map) {
-    data d(get(msg));
-    if (d.empty() && !map.empty()) {
-        d.encoder() << map;
-        map.clear();        // The encoded pn_data_t  is now the authority.
+    codec::encoder e(get(msg));
+    if (e.empty() && !map.empty()) {
+        e << map;
+        map.clear();            // The encoded pn_data_t  is now the authority.
     }
     return map;
 }
@@ -289,9 +280,10 @@ void message::decode(const std::vector<char> &s) {
     check(pn_message_decode(pn_msg(), &s[0], s.size()));
 }
 
-void message::decode(proton::link link, proton::delivery delivery) {
+void message::decode(proton::delivery delivery) {
     std::vector<char> buf;
     buf.resize(delivery.pending());
+    proton::link link = delivery.link();
     ssize_t n = link.recv(const_cast<char *>(&buf[0]), buf.size());
     if (n != ssize_t(buf.size())) throw error(MSG("link read failure"));
     clear();
@@ -303,7 +295,7 @@ bool message::durable() const { return pn_message_is_durable(pn_msg()); }
 void message::durable(bool b) { pn_message_set_durable(pn_msg(), b); }
 
 duration message::ttl() const { return duration(pn_message_get_ttl(pn_msg())); }
-void message::ttl(duration d) { pn_message_set_ttl(pn_msg(), d.milliseconds); }
+void message::ttl(duration d) { pn_message_set_ttl(pn_msg(), d.ms()); }
 
 uint8_t message::priority() const { return pn_message_get_priority(pn_msg()); }
 void message::priority(uint8_t d) { pn_message_set_priority(pn_msg(), d); }

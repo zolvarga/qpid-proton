@@ -20,19 +20,26 @@
  * under the License.
  */
 
-#include "proton/comparable.hpp"
-#include "proton/types.hpp"
+#include <proton/binary.hpp>
+#include <proton/export.hpp>
+#include <proton/comparable.hpp>
+#include <proton/types_fwd.hpp>
+#include <proton/type_id.hpp>
 
 #include <iosfwd>
 #include <string>
 
 namespace proton {
 
-class encoder;
+namespace codec {
 class decoder;
+class encoder;
+}
 
 /// A holder for an instance of any scalar AMQP type.
-class scalar : public comparable<scalar> {
+/// The conversions for scalar types are documented in proton::amqp.
+///
+class scalar : private comparable<scalar> {
   public:
     /// Create an empty scalar.
     PN_CPP_EXTERN scalar();
@@ -49,9 +56,38 @@ class scalar : public comparable<scalar> {
     /// True if the scalar is empty.
     PN_CPP_EXTERN bool empty() const;
 
+    /// @name Construct from a C++ value.
+    /// See proton::amqp for the list of type correspondences.
+    ///
+    /// @{
+    PN_CPP_EXTERN scalar(bool x);
+    PN_CPP_EXTERN scalar(uint8_t x);
+    PN_CPP_EXTERN scalar(int8_t x);
+    PN_CPP_EXTERN scalar(uint16_t x);
+    PN_CPP_EXTERN scalar(int16_t x);
+    PN_CPP_EXTERN scalar(uint32_t x);
+    PN_CPP_EXTERN scalar(int32_t x);
+    PN_CPP_EXTERN scalar(uint64_t x);
+    PN_CPP_EXTERN scalar(int64_t x);
+    PN_CPP_EXTERN scalar(wchar_t x);
+    PN_CPP_EXTERN scalar(float x);
+    PN_CPP_EXTERN scalar(double x);
+    PN_CPP_EXTERN scalar(timestamp x);
+    PN_CPP_EXTERN scalar(const decimal32& x);
+    PN_CPP_EXTERN scalar(const decimal64& x);
+    PN_CPP_EXTERN scalar(const decimal128& x);
+    PN_CPP_EXTERN scalar(const uuid& x);
+    PN_CPP_EXTERN scalar(const std::string& x);
+    PN_CPP_EXTERN scalar(const symbol& x);
+    PN_CPP_EXTERN scalar(const binary& x);
+    PN_CPP_EXTERN scalar(const char* s); ///< Treated as an AMQP string
+    /// @}
+
+
     /// @name Assignment operators
     ///
-    /// Assign a C++ value and deduce the AMQP type().
+    /// Assign a C++ value as the corresponding AMQP type.
+    /// See proton::amqp for the list of type correspondences.
     ///
     /// @{
     PN_CPP_EXTERN scalar& operator=(bool);
@@ -66,25 +102,22 @@ class scalar : public comparable<scalar> {
     PN_CPP_EXTERN scalar& operator=(wchar_t);
     PN_CPP_EXTERN scalar& operator=(float);
     PN_CPP_EXTERN scalar& operator=(double);
-    PN_CPP_EXTERN scalar& operator=(amqp_timestamp);
-    PN_CPP_EXTERN scalar& operator=(const amqp_decimal32&);
-    PN_CPP_EXTERN scalar& operator=(const amqp_decimal64&);
-    PN_CPP_EXTERN scalar& operator=(const amqp_decimal128&);
-    PN_CPP_EXTERN scalar& operator=(const amqp_uuid&);
-    PN_CPP_EXTERN scalar& operator=(const amqp_string&);
-    PN_CPP_EXTERN scalar& operator=(const amqp_symbol&);
-    PN_CPP_EXTERN scalar& operator=(const amqp_binary&);
-    PN_CPP_EXTERN scalar& operator=(const std::string& s); ///< Treated as an AMQP string
-    PN_CPP_EXTERN scalar& operator=(const char* s);        ///< Treated as an AMQP string
+    PN_CPP_EXTERN scalar& operator=(timestamp);
+    PN_CPP_EXTERN scalar& operator=(const decimal32&);
+    PN_CPP_EXTERN scalar& operator=(const decimal64&);
+    PN_CPP_EXTERN scalar& operator=(const decimal128&);
+    PN_CPP_EXTERN scalar& operator=(const uuid&);
+    PN_CPP_EXTERN scalar& operator=(const std::string&);
+    PN_CPP_EXTERN scalar& operator=(const symbol&);
+    PN_CPP_EXTERN scalar& operator=(const binary&);
+    PN_CPP_EXTERN scalar& operator=(const char* s); ///< Treated as an AMQP string
     /// @}
 
-    /// Create a scalar from any type that we can assign from.
-    template <class T> explicit scalar(T x) { *this = x; }
 
     /// @name Get methods
     ///
     /// get(T&) extracts the value if the types match exactly and
-    /// throws type_error otherwise.
+    /// throws conversion_error otherwise.
     ///
     /// @{
     PN_CPP_EXTERN void get(bool&) const;
@@ -99,15 +132,14 @@ class scalar : public comparable<scalar> {
     PN_CPP_EXTERN void get(wchar_t&) const;
     PN_CPP_EXTERN void get(float&) const;
     PN_CPP_EXTERN void get(double&) const;
-    PN_CPP_EXTERN void get(amqp_timestamp&) const;
-    PN_CPP_EXTERN void get(amqp_decimal32&) const;
-    PN_CPP_EXTERN void get(amqp_decimal64&) const;
-    PN_CPP_EXTERN void get(amqp_decimal128&) const;
-    PN_CPP_EXTERN void get(amqp_uuid&) const;
-    PN_CPP_EXTERN void get(amqp_string&) const;
-    PN_CPP_EXTERN void get(amqp_symbol&) const;
-    PN_CPP_EXTERN void get(amqp_binary&) const;
-    PN_CPP_EXTERN void get(std::string&) const; ///< Treated as an AMQP string
+    PN_CPP_EXTERN void get(timestamp&) const;
+    PN_CPP_EXTERN void get(decimal32&) const;
+    PN_CPP_EXTERN void get(decimal64&) const;
+    PN_CPP_EXTERN void get(decimal128&) const;
+    PN_CPP_EXTERN void get(uuid&) const;
+    PN_CPP_EXTERN void get(symbol&) const;
+    PN_CPP_EXTERN void get(binary&) const;
+    PN_CPP_EXTERN void get(std::string&) const;
     /// @}
 
     /// get<T>() is like get(T&) but returns the value.
@@ -117,7 +149,7 @@ class scalar : public comparable<scalar> {
     ///
     /// As methods do "loose" conversion.  They will convert the
     /// scalar's value to the requested type if possible, else throw
-    /// type_error.
+    /// conversion_error.
     ///
     /// @{
     PN_CPP_EXTERN int64_t as_int() const;        ///< Allowed if type_id_is_integral(type())
@@ -127,10 +159,8 @@ class scalar : public comparable<scalar> {
     /// @}
 
     /// @cond INTERNAL
-    
+
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const scalar&);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, const scalar&);
-  friend PN_CPP_EXTERN decoder operator>>(decoder, scalar&);
 
     /// Scalars with different type() are considered unequal even if the values
     /// are equal as numbers or strings.
@@ -140,22 +170,24 @@ class scalar : public comparable<scalar> {
   friend PN_CPP_EXTERN bool operator<(const scalar& x, const scalar& y);
 
     /// @endcond
-    
+
   private:
+    scalar(const pn_atom_t& a);
     void ok(pn_type_t) const;
-    void set(const std::string&, pn_type_t);
+    void set(const binary&, pn_type_t);
     void set(const pn_atom_t&);
     pn_atom_t atom_;
-    std::string str_;           // Owner of string-like data.
+    binary bytes_;              // Hold binary data.
 
   friend class message;
+  friend class restricted_scalar;
+  friend class codec::encoder;
+  friend class codec::decoder;
 };
 
 /// @cond INTERNAL
-/// XXX should it be public?
-    
 /// Base class for restricted scalar types.
-class restricted_scalar : public comparable<restricted_scalar> {
+class restricted_scalar : private comparable<restricted_scalar> {
   public:
     operator const scalar&() const { return scalar_; }
     type_id type() const { return scalar_.type(); }
@@ -164,7 +196,7 @@ class restricted_scalar : public comparable<restricted_scalar> {
     ///
     /// As methods do "loose" conversion.  They will convert the
     /// scalar's value to the requested type if possible, else throw
-    /// type_error.
+    /// conversion_error.
     ///
     /// @{
     int64_t as_int() const { return scalar_.as_int(); }
@@ -175,13 +207,17 @@ class restricted_scalar : public comparable<restricted_scalar> {
 
   protected:
     restricted_scalar() {}
+    restricted_scalar(const pn_atom_t& a) : scalar_(a) {}
+    restricted_scalar(const restricted_scalar& x) : scalar_(x.scalar_) {}
+
     scalar scalar_;
+
+  friend class message;
 
     friend std::ostream& operator<<(std::ostream& o, const restricted_scalar& x)  { return o << x.scalar_; }
     friend bool operator<(const restricted_scalar& x, const restricted_scalar& y)  { return x.scalar_ < y.scalar_; }
     friend bool operator==(const restricted_scalar& x, const restricted_scalar& y)  { return x.scalar_ == y.scalar_; }
 };
-
 /// @endcond
 
 }

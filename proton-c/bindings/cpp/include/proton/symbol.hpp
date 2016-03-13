@@ -1,5 +1,5 @@
-#ifndef UUID_HPP
-#define UUID_HPP
+#ifndef SYMBOL_HPP
+#define SYMBOL_HPP
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,23 +19,17 @@
  * under the License.
  */
 
-#include <proton/types.hpp>
-
-#include <string>
-#include <iosfwd>
-
 namespace proton {
 
-/// A random UUID.
-struct uuid {
-    PN_CPP_EXTERN uuid();
-    uint8_t bytes[16];
-    PN_CPP_EXTERN std::string str()  const;
+/// symbol is a std::string that represents the AMQP symbol type.
+/// A symbol can only contain 7-bit ASCII characters.
+///
+class symbol : public std::string {
+  public:
+    symbol(const std::string& s=std::string()) : std::string(s) {}
+    symbol(const char* s) : std::string(s) {}
 };
-
-/// UUID standard format: 8-4-4-4-12 (36 chars, 32 alphanumeric and 4 hypens)
-PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const uuid&);
 
 }
 
-#endif // UUID_HPP
+#endif // SYMBOL_HPP

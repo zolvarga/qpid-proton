@@ -116,7 +116,7 @@ void messaging_adapter::on_delivery(proton_event &pe) {
             // See PROTON-998
             class message &msg(ctx.event_message);
             mevent.message_ = &msg;
-            mevent.message_->decode(lnk, dlv);
+            mevent.message_->decode(dlv);
             if (pn_link_state(lnk) & PN_LOCAL_CLOSED) {
                 if (auto_accept_)
                     dlv.release();
@@ -133,7 +133,7 @@ void messaging_adapter::on_delivery(proton_event &pe) {
     } else {
         // sender
         if (dlv.updated()) {
-            amqp_ulong rstate = dlv.remote_state();
+            uint64_t rstate = dlv.remote_state();
             if (rstate == PN_ACCEPTED) {
                 messaging_event mevent(messaging_event::DELIVERY_ACCEPT, pe);
                 delegate_.on_delivery_accept(mevent);

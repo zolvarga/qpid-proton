@@ -25,7 +25,6 @@
 #include "proton/duration.hpp"
 #include "proton/export.hpp"
 #include "proton/pn_unique_ptr.hpp"
-#include "proton/reactor.hpp"
 #include "proton/url.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/link_options.hpp"
@@ -60,7 +59,10 @@ class container {
     ///
     /// Container ID should be unique within your system. By default a
     /// random ID is generated.
-    PN_CPP_EXTERN container(const std::string& id="");
+    ///
+    /// This container will not be very useful unless event handlers are supplied
+    /// as options when creating a connection/listener/sender or receiver.
+    PN_CPP_EXTERN container(const std::string& id=std::string());
 
     /// Create a container with an event handler.
     ///
@@ -100,11 +102,6 @@ class container {
     PN_CPP_EXTERN std::string id() const;
 
     /// @cond INTERNAL
-
-    /// XXX remove
-    /// The reactor associated with this container.
-    PN_CPP_EXTERN class reactor reactor() const;
-
     /// XXX settle some API questions
     /// Schedule a timer task event in delay milliseconds.
     PN_CPP_EXTERN task schedule(int delay, handler *h = 0);
@@ -128,10 +125,13 @@ class container {
     /// options in other methods.
     PN_CPP_EXTERN void link_options(const link_options &);
 
-  private:
-    pn_unique_ptr<container_impl> impl_;
-
     /// @cond INTERNAL
+  private:
+    /// The reactor associated with this container.
+    class reactor reactor() const;
+
+    internal::pn_unique_ptr<container_impl> impl_;
+
     friend class connector;
     friend class link;
     /// @endcond

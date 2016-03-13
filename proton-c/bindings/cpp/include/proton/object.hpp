@@ -28,6 +28,7 @@
 #include <memory>
 
 namespace proton {
+namespace internal {
 
 class pn_ptr_base {
   protected:
@@ -35,13 +36,13 @@ class pn_ptr_base {
     PN_CPP_EXTERN static void decref(void* p);
 };
 
-template <class T> class pn_ptr : private pn_ptr_base, public comparable<pn_ptr<T> > {
+template <class T> class pn_ptr : private pn_ptr_base, private comparable<pn_ptr<T> > {
   public:
     pn_ptr() : ptr_(0) {}
     pn_ptr(T* p) : ptr_(p) { incref(ptr_); }
     pn_ptr(const pn_ptr& o) : ptr_(o.ptr_) { incref(ptr_); }
 
-#if PN_HAS_CPP11
+#if PN_CPP_HAS_CPP11
     pn_ptr(pn_ptr&& o) : ptr_(0) { std::swap(ptr_, o.ptr_); }
 #endif
 
@@ -69,7 +70,7 @@ template <class T> class pn_ptr : private pn_ptr_base, public comparable<pn_ptr<
 template <class T> pn_ptr<T> take_ownership(T* p) { return pn_ptr<T>::take_ownership(p); }
 
 /// Base class for proton object types.
-template <class T> class object : public comparable<object<T> > {
+template <class T> class object : private comparable<object<T> > {
   public:
     bool operator!() const { return !object_; }
 
@@ -84,7 +85,7 @@ template <class T> class object : public comparable<object<T> > {
     friend bool operator<(const object& a, const object& b) { return a.object_ < b.object_; }
 };
 
-}
+}}
 
 /// @endcond
 

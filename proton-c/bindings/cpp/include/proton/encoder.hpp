@@ -20,107 +20,31 @@
  * under the License.
  */
 
-/// @cond INTERNAL
-/// XXX change namespace, review better
-
-#include "proton/error.hpp"
-#include "proton/types.hpp"
-#include "proton/type_traits.hpp"
-#include "proton/object.hpp"
-#include <iosfwd>
-
-#ifndef PN_NO_CONTAINER_CONVERT
-
-#include <vector>
-#include <deque>
-#include <list>
-#include <map>
-
-#if PN_HAS_CPP11
-#include <array>
-#include <forward_list>
-#include <unordered_map>
-#endif // PN_HAS_CPP11
-
-#endif // PN_NO_CONTAINER_CONVERT
-
-/// @file
-/// @internal
-
-struct pn_data_t;
+#include <proton/data.hpp>
+#include <proton/type_traits.hpp>
 
 namespace proton {
 
 class scalar;
-class data;
-class message_id;
-class annotation_key;
 class value;
 
-template<class T, type_id A> struct cref {
-    typedef T cpp_type;
-    static const type_id type;
+namespace codec {
 
-    cref(const T& v) : value(v) {}
-    const T& value;
-};
-
-template <class T, type_id A> const type_id cref<T, A>::type = A;
-
-/**
- * Indicate the desired AMQP type to use when encoding T.
- * For example to encode a vector as a list:
- *
- *     std::vector<amqp_int> v;
- *     encoder << as<LIST>(v);
- */
-template <type_id A, class T> cref<T, A> as(const T& value) { return cref<T, A>(value); }
-
-/**
- * Stream-like encoder from C++ values to AMQP values.
- *
- * types.hpp defines a C++ type for each AMQP type. For simple types they are
- * just typedefs for corresponding native C++ types. These types encode as the
- * corresponding AMQP type.
- *
- * There are some special case conversions:
- *
- * - Integer types other than those mentioned in types.hpp encode as the AMQP
- *   integer type of matching size and signedness.
- * - std::string or char* insert as AMQP STRING.
- *
- * For example to encode an AMQP INT, BOOLEAN and STRING these are equivalent:
- *
- *     enc << proton::amqp_int(1) << proton::amqp_boolean(true) << proton::amqp_string("foo");
- *     enc << int32_t(1) << true << "foo";
- *
- * You can force the encoding using the `proton::as` template function, for example:
- *
- *     uint64_t i = 100;
- *     enc << as<proton::SHORT>(i);
- *
- * C++ standard containers can be inserted. By default:
- *
- * - std::map and std::unordered_map encode as AMQP MAP
- * - std::vector, std::deque, std::list, std::array or std::forward_list encode as an AMQP ARRAY.
- * - std::vector<proton::value> etc. encode as AMQP LIST
- *
- * Again you can force the encoding using proton::as<LIST>() or proton::as<ARRAY>()
- *
- * Note that you can encode a sequence of pairs as a map, which allows you to control the
- * encoded order if that is important:
- *
- *     std::vector<std::pair<T1, T2> > v;
- *     enc << proton::as<MAP>(v);
- *
- * You can also insert containers element-by-element, see operator<<(encoder&, const start&)
- */
-class encoder : public object<pn_data_t> {
+/// Stream-like encoder from AMQP bytes to C++ values.
+///
+/// Internal use only, see proton::value, proton::scalar and proton::amqp
+/// for the recommended ways to manage AMQP data.
+class encoder : public data {
   public:
-    encoder(pn_data_t* e) : object<pn_data_t>(e) {}
+    ///@internal
+    explicit encoder(const data& d) : data(d) {}
+
+    /// Encoder into v. Clears any current value in v.
+    PN_CPP_EXTERN explicit encoder(value& v);
 
     /**
-     * Encode the current values into buffer and update size to reflect the number of bytes encoded.
+     * Encode the current values into buffer and update size to reflect the
+     * number of bytes encoded.
      *
      * Clears the encoder.
      *
@@ -138,138 +62,98 @@ class encoder : public object<pn_data_t> {
     /** Encode the current values into a std::string. Clears the encoder. */
     PN_CPP_EXTERN std::string encode();
 
-    PN_CPP_EXTERN class data data();
+    PN_CPP_EXTERN encoder& operator<<(bool);
+    PN_CPP_EXTERN encoder& operator<<(uint8_t);
+    PN_CPP_EXTERN encoder& operator<<(int8_t);
+    PN_CPP_EXTERN encoder& operator<<(uint16_t);
+    PN_CPP_EXTERN encoder& operator<<(int16_t);
+    PN_CPP_EXTERN encoder& operator<<(uint32_t);
+    PN_CPP_EXTERN encoder& operator<<(int32_t);
+    PN_CPP_EXTERN encoder& operator<<(wchar_t);
+    PN_CPP_EXTERN encoder& operator<<(uint64_t);
+    PN_CPP_EXTERN encoder& operator<<(int64_t);
+    PN_CPP_EXTERN encoder& operator<<(timestamp);
+    PN_CPP_EXTERN encoder& operator<<(float);
+    PN_CPP_EXTERN encoder& operator<<(double);
+    PN_CPP_EXTERN encoder& operator<<(decimal32);
+    PN_CPP_EXTERN encoder& operator<<(decimal64);
+    PN_CPP_EXTERN encoder& operator<<(decimal128);
+    PN_CPP_EXTERN encoder& operator<<(const uuid&);
+    PN_CPP_EXTERN encoder& operator<<(const std::string&);
+    PN_CPP_EXTERN encoder& operator<<(const symbol&);
+    PN_CPP_EXTERN encoder& operator<<(const binary&);
+    PN_CPP_EXTERN encoder& operator<<(const scalar&);
+    PN_CPP_EXTERN encoder& operator<<(const null&);
 
-    /** @name Insert simple types.
-     *@{
-     */
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_null);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_boolean);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_ubyte);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_byte);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_ushort);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_short);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_uint);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_int);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_char);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_ulong);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_long);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_timestamp);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_float);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_double);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_decimal32);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_decimal64);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_decimal128);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_uuid);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_string);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_symbol);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_binary);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, const message_id&);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, const annotation_key&);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, const value&);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, const scalar&);
-    ///@}
+    /// Inserts proton::value.
+    PN_CPP_EXTERN encoder& operator<<(exact_cref<value>);
 
-    /**
-     * Start a container type.
-     *
-     * Use one of the static functions start::array(), start::list(),
-     * start::map() or start::described() to create an appropriate start value
-     * and insert it into the encoder, followed by the contained elements.  For
-     * example:
-     *
-     *      enc << start::list() << amqp_int(1) << amqp_symbol("two") << 3.0 << finish();
-     */
-  friend PN_CPP_EXTERN encoder operator<<(encoder, const start&);
+    PN_CPP_EXTERN encoder& operator<<(const start&);
+    /// Finish a complex type
+    PN_CPP_EXTERN encoder& operator<<(const finish&);
 
-    /** Finish a container type. See operator<<(encoder&, const start&) */
-  friend PN_CPP_EXTERN encoder operator<<(encoder e, finish);
+    // XXX doc
+    template <class T> struct list_cref { T& ref; list_cref(T& r) : ref(r) {} };
+    template <class T> struct map_cref { T& ref;  map_cref(T& r) : ref(r) {} };
 
+    template <class T> struct array_cref {
+        start array_start;
+        T& ref;
+        array_cref(T& r, type_id el, bool described) : array_start(ARRAY, el, described), ref(r) {}
+    };
 
-    /**@name Insert values returned by the as<type_id> helper.
-     *@{
-     */
-  template <class T, type_id A> friend PN_CPP_EXTERN encoder operator<<(encoder, cref<T, A>);
-  template <class T> friend encoder operator<<(encoder, cref<T, ARRAY>);
-  template <class T> friend encoder operator<<(encoder, cref<T, LIST>);
-  template <class T> friend encoder operator<<(encoder, cref<T, MAP>);
-    // TODO aconway 2015-06-16: described values.
-    ///@}
+    template <class T> static list_cref<T> list(T& x) { return list_cref<T>(x); }
+    template <class T> static map_cref<T> map(T& x) { return map_cref<T>(x); }
+    template <class T> static array_cref<T> array(T& x, type_id element, bool described=false) {
+        return array_cref<T>(x, element, described);
+    }
+
+    template <class T> encoder& operator<<(const map_cref<T>& x) {
+        state_guard sg(*this);
+        *this << start::map();
+        for (typename T::const_iterator i = x.ref.begin(); i != x.ref.end(); ++i)
+            *this << i->first << i->second;
+        *this << finish();
+        return *this;
+    }
+
+    template <class T> encoder& operator<<(const list_cref<T>& x) {
+        state_guard sg(*this);
+        *this << start::list();
+        for (typename T::const_iterator i = x.ref.begin(); i != x.ref.end(); ++i)
+            *this << *i;
+        *this << finish();
+        return *this;
+    }
+
+    template <class T> encoder& operator<<(const array_cref<T>& x) {
+        state_guard sg(*this);
+        *this << x.array_start;
+        for (typename T::const_iterator i = x.ref.begin(); i != x.ref.end(); ++i)
+            *this << *i;
+        *this << finish();
+        return *this;
+    }
+
+  private:
+    template<class T, class U> encoder& insert(const T& x, int (*put)(pn_data_t*, U));
+    void check(long result);
 };
 
-// Need to disambiguate char* conversion to bool and std::string as amqp_string.
-inline encoder operator<<(encoder e, char* s) { return e << amqp_string(s); }
-inline encoder operator<<(encoder e, const char* s) { return e << amqp_string(s); }
-inline encoder operator<<(encoder e, const std::string& s) { return e << amqp_string(s); }
+///@internal
+/// Invalid template to  prevent pointers being implicitly converted to bool.
+template <class T> void* operator<<(encoder&, const T*);
+
+// Treat char* as string
+inline encoder& operator<<(encoder& e, const char* s) { return e << std::string(s); }
 
 // operator << for integer types that are not covered by the standard overrides.
-template <class T>
-typename enable_if<is_unknown_integer<T>::value, encoder>::type operator<<(encoder e, T i)  {
-    typename integer_type<sizeof(T), is_signed<T>::value>::type v = i;
-    return e << v;              // Insert as a known integer type
+template <class T> typename codec::enable_unknown_integer<T, encoder&>::type
+operator<<(encoder& e, T i)  {
+    return e << static_cast<typename integer_type<sizeof(T), is_signed<T>::value>::type>(i);
 }
 
-// TODO aconway 2015-06-16: described array insertion.
-
-template <class T> encoder operator<<(encoder e, cref<T, ARRAY> a) {
-    e << start::array(type_id_of<typename T::value_type>::value);
-    for (typename T::const_iterator i = a.value.begin(); i != a.value.end(); ++i)
-        e << *i;
-    e << finish();
-    return e;
-}
-
-template <class T> encoder operator<<(encoder e, cref<T, LIST> l) {
-    e << start::list();
-    for (typename T::const_iterator i = l.value.begin(); i != l.value.end(); ++i)
-        e << *i;
-    e << finish();
-    return e;
-}
-
-template <class T> encoder operator<<(encoder e, cref<T, MAP> m){
-    e << start::map();
-    for (typename T::const_iterator i = m.value.begin(); i != m.value.end(); ++i) {
-        e << i->first;
-        e << i->second;
-    }
-    e << finish();
-    return e;
-}
-
-#ifndef PN_NO_CONTAINER_CONVERT
-// Encode as ARRAY
-template <class T, class A> encoder operator<<(encoder e, const std::vector<T, A>& v) { return e << as<ARRAY>(v); }
-template <class T, class A> encoder operator<<(encoder e, const std::deque<T, A>& v) { return e << as<ARRAY>(v); }
-template <class T, class A> encoder operator<<(encoder e, const std::list<T, A>& v) { return e << as<ARRAY>(v); }
-
-// Encode as LIST
-template <class A> encoder operator<<(encoder e, const std::vector<value, A>& v) { return e << as<LIST>(v); }
-template <class A> encoder operator<<(encoder e, const std::deque<value, A>& v) { return e << as<LIST>(v); }
-template <class A> encoder operator<<(encoder e, const std::list<value, A>& v) { return e << as<LIST>(v); }
-
-// Encode as MAP
-template <class K, class T, class C, class A> encoder operator<<(encoder e, const std::map<K, T, C, A>& v) { return e << as<MAP>(v); }
-
-#if PN_HAS_CPP11
-
-// Encode as ARRAY.
-template <class T, class A> encoder operator<<(encoder e, const std::forward_list<T, A>& v) { return e << as<ARRAY>(v); }
-template <class T, std::size_t N> encoder operator<<(encoder e, const std::array<T, N>& v) { return e << as<ARRAY>(v); }
-
-// Encode as LIST.
-template <class A> encoder operator<<(encoder e, const std::forward_list<value, A>& v) { return e << as<LIST>(v); }
-template <std::size_t N> encoder operator<<(encoder e, const std::array<value, N>& v) { return e << as<LIST>(v); }
-
-// Encode as map.
-template <class K, class T, class C, class A> encoder operator<<(encoder e, const std::unordered_map<K, T, C, A>& v) { return e << as<MAP>(v); }
-
-#endif // PN_HAS_CPP11
-
-#endif // PN_NO_CONTAINER_CONVERT
-
-}
-
-/// @endcond
+} // internal
+} // proton
 
 #endif // ENCODER_H

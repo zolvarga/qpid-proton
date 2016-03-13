@@ -22,37 +22,41 @@
  *
  */
 
-#include "proton/export.hpp"
-#include "proton/types.hpp"
-#include "proton/comparable.hpp"
+#include <proton/export.hpp>
+#include <proton/comparable.hpp>
+#include <proton/types_fwd.hpp>
+
+#include <iosfwd>
 
 namespace proton {
 
 /// A span of time in milliseconds.
-class duration : public comparable<duration> {
+class duration : private comparable<duration> {
   public:
-    /// @cond INTERNAL
-    /// XXX public and mutable?
-    uint64_t milliseconds;
-    /// @endcond
-
-    /// Create a duration.
-    explicit duration(uint64_t ms = 0) : milliseconds(ms) {}
+    typedef uint64_t numeric_type;
+    explicit duration(numeric_type ms = 0) : ms_(ms) {}
+    duration& operator=(numeric_type ms) { ms_ = ms; return *this; }
+    numeric_type milliseconds() const { return ms_; }
+    numeric_type ms() const { return ms_; }
 
     PN_CPP_EXTERN static const duration FOREVER;   ///< Wait for ever
     PN_CPP_EXTERN static const duration IMMEDIATE; ///< Don't wait at all
     PN_CPP_EXTERN static const duration SECOND;    ///< One second
     PN_CPP_EXTERN static const duration MINUTE;    ///< One minute
+
+  private:
+    numeric_type ms_;
 };
 
-inline bool operator<(duration x, duration y) { return x.milliseconds < y.milliseconds; }
-inline bool operator==(duration x, duration y) { return x.milliseconds == y.milliseconds; }
+PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, duration);
 
-inline duration operator*(duration d, amqp_ulong n) { return duration(d.milliseconds*n); }
-inline duration operator*(amqp_ulong n, duration d) { return d * n; }
+inline bool operator<(duration x, duration y) { return x.ms() < y.ms(); }
+inline bool operator==(duration x, duration y) { return x.ms() == y.ms(); }
 
-inline amqp_timestamp operator+(amqp_timestamp ts, duration d) { return amqp_timestamp(ts.milliseconds+d.milliseconds); }
-inline amqp_timestamp operator+(duration d, amqp_timestamp ts) { return ts + d; }
+inline duration operator+(duration x, duration y) { return duration(x.ms() + y.ms()); }
+inline duration operator-(duration x, duration y) { return duration(x.ms() - y.ms()); }
+inline duration operator*(duration d, uint64_t n) { return duration(d.ms()*n); }
+inline duration operator*(uint64_t n, duration d) { return d * n; }
 
 }
 

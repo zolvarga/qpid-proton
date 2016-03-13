@@ -33,7 +33,13 @@ class connection_options;
 
 /// SSL information.
 class ssl {
+    /// @cond INTERNAL
+    ssl(pn_ssl_t* s) : object_(s) {}
+    /// @endcond
+
   public:
+    ssl() : object_(0) {}
+
     /// Determines the level of peer validation.
     enum verify_mode {
         /// Require peer to provide a valid identifying certificate
@@ -50,10 +56,6 @@ class ssl {
         NEW = PN_SSL_RESUME_NEW,         ///< Session renegotiated, not resumed
         REUSED = PN_SSL_RESUME_REUSED    ///< Session resumed from previous session
     };
-
-    /// @cond INTERNAL
-    ssl(pn_ssl_t* s) : object_(s) {}
-    /// @endcond
 
     /// @cond INTERNAL
 
@@ -82,8 +84,12 @@ class ssl {
 
     /// @endcond
 
+    /// @cond INTERNAL
   private:
     pn_ssl_t* object_;
+
+    friend class transport;
+    /// @endcond
 };
 
 class ssl_certificate {
@@ -161,18 +167,15 @@ class ssl_server_options : private internal::ssl_domain {
 /// SSL configuration for outbound connections.
 class ssl_client_options : private internal::ssl_domain {
   public:
-    /// Create SSL client options.
+    /// Create SSL client options (no client certificate).
     PN_CPP_EXTERN ssl_client_options(const std::string &trust_db,
                                      enum ssl::verify_mode = ssl::VERIFY_PEER_NAME);
 
-    /// Create SSL client options.
-    ///
-    /// @internal
-    /// XXX how is this distinct?
+    /// Create SSL client options with a client certificate.
     PN_CPP_EXTERN ssl_client_options(ssl_certificate&, const std::string &trust_db,
                                      enum ssl::verify_mode = ssl::VERIFY_PEER_NAME);
 
-    /// Server SSL options restricted to available anonymous cipher
+    /// SSL connections restricted to available anonymous cipher
     /// suites on the platform.
     PN_CPP_EXTERN ssl_client_options();
 

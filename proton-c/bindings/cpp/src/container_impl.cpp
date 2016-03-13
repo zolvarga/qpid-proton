@@ -32,6 +32,7 @@
 #include "proton/ssl.hpp"
 #include "proton/sasl.hpp"
 #include "proton/transport.hpp"
+#include "proton/uuid.hpp"
 
 #include "connector.hpp"
 #include "container_impl.hpp"
@@ -39,7 +40,6 @@
 #include "messaging_adapter.hpp"
 #include "messaging_event.hpp"
 #include "msg.hpp"
-#include "uuid.hpp"
 
 #include "proton/connection.h"
 #include "proton/session.h"
@@ -76,12 +76,13 @@ struct handler_context {
     proton_handler *handler_;
 };
 
+} // namespace
 
 // Used to sniff for connector events before the reactor's global handler sees them.
 class override_handler : public proton_handler
 {
   public:
-    pn_ptr<pn_handler_t> base_handler;
+    internal::pn_ptr<pn_handler_t> base_handler;
     container_impl &container_impl_;
 
     override_handler(pn_handler_t *h, container_impl &c) : base_handler(h), container_impl_(c) {}
@@ -108,11 +109,9 @@ class override_handler : public proton_handler
     }
 };
 
-} // namespace
-
-pn_ptr<pn_handler_t> container_impl::cpp_handler(proton_handler *h) {
+internal::pn_ptr<pn_handler_t> container_impl::cpp_handler(proton_handler *h) {
     if (!h->pn_handler_) {
-        h->pn_handler_ = take_ownership(
+        h->pn_handler_ = internal::take_ownership(
             pn_handler_new(&handler_context::dispatch,
                            sizeof(struct handler_context),
                            &handler_context::cleanup));
@@ -125,14 +124,14 @@ pn_ptr<pn_handler_t> container_impl::cpp_handler(proton_handler *h) {
 
 container_impl::container_impl(container& c, messaging_adapter *h, const std::string& id) :
     container_(c), reactor_(reactor::create()), handler_(h),
-    id_(id.empty() ? uuid().str() : id), id_gen_()
+    id_(id.empty() ? uuid::random().str() : id), id_gen_()
 {
     container_context::set(reactor_, container_);
 
     // Set our own global handler that "subclasses" the existing one
     pn_handler_t *global_handler = reactor_.pn_global_handler();
     override_handler_.reset(new override_handler(global_handler, *this));
-    pn_ptr<pn_handler_t> cpp_global_handler(cpp_handler(override_handler_.get()));
+    internal::pn_ptr<pn_handler_t> cpp_global_handler(cpp_handler(override_handler_.get()));
     reactor_.pn_global_handler(cpp_global_handler.get());
     if (handler_) {
         reactor_.pn_handler(cpp_handler(handler_).get());
@@ -151,9 +150,9 @@ connection container_impl::connect(const proton::url &url, const connection_opti
     opts.override(user_opts);
     proton_handler *h = opts.handler();
 
-    pn_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : pn_ptr<pn_handler_t>();
+    internal::pn_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : internal::pn_ptr<pn_handler_t>();
     connection conn(reactor_.connection(chandler.get()));
-    pn_unique_ptr<connector> ctor(new connector(conn, opts));
+    internal::pn_unique_ptr<connector> ctor(new connector(conn, opts));
     ctor->address(url);  // TODO: url vector
     connection_context& cc(connection_context::get(conn));
     cc.handler.reset(ctor.release());
@@ -194,7 +193,7 @@ acceptor container_impl::listen(const proton::url& url, const connection_options
     connection_options opts = server_connection_options(); // Defaults
     opts.override(user_opts);
     proton_handler *h = opts.handler();
-    pn_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : pn_ptr<pn_handler_t>();
+    internal::pn_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : internal::pn_ptr<pn_handler_t>();
     pn_acceptor_t *acptr = pn_reactor_acceptor(reactor_.pn_object(), url.host().c_str(), url.port().c_str(), chandler.get());
     if (!acptr)
         throw error(MSG("accept fail: " <<
@@ -209,7 +208,7 @@ acceptor container_impl::listen(const proton::url& url, const connection_options
 }
 
 task container_impl::schedule(int delay, proton_handler *h) {
-    pn_ptr<pn_handler_t> task_handler;
+    internal::pn_ptr<pn_handler_t> task_handler;
     if (h)
         task_handler = cpp_handler(h);
     return reactor_.schedule(delay, task_handler.get());

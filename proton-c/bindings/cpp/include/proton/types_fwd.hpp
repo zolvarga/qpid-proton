@@ -1,3 +1,5 @@
+#ifndef PROTON_TYPES_FWD_HPP
+#define PROTON_TYPES_FWD_HPP
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,27 +19,29 @@
  * under the License.
  */
 
-///@internal
-#include "proton/types.hpp"
 
-#ifndef ID_GENERATOR_HPP
-#define ID_GENERATOR_HPP
+///@file
+///
+/// Forward declarations for all the C++ types used by proton to represent AMQP types.
+
+#include <proton/type_compat.h>
+#include <string>
 
 namespace proton {
 
-///@cond INTERNAL
-class id_generator {
-  public:
-    PN_CPP_EXTERN id_generator(const std::string &prefix="");
-    PN_CPP_EXTERN std::string next();
-    void prefix(const std::string &p) { prefix_ = p; }
-    const std::string& prefix() const { return prefix_; }
-
-  private:
-    std::string prefix_;
-    uint64_t count_;
-};
+class binary;
+class decimal128;
+class decimal32;
+class decimal64;
+class scalar;
+class symbol;
+class timestamp;
+class duration;
+class uuid;
+class uuid;
+class value;
+struct null {};
 
 }
-///@endcond
-#endif
+
+#endif // PROTON_TYPES_FWD_HPP

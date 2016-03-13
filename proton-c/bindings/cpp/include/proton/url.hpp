@@ -20,8 +20,8 @@
  * under the License.
  */
 
-#include "proton/types.hpp"
-#include "proton/error.hpp"
+#include <proton/types_fwd.hpp>
+#include <proton/error.hpp>
 
 #include <iosfwd>
 
@@ -30,7 +30,8 @@ struct pn_url_t;
 namespace proton {
 
 /// Raised if URL parsing fails.
-struct url_error : public error {
+struct
+PN_CPP_CLASS_EXTERN url_error : public error {
     /// @cond INTERNAL
     PN_CPP_EXTERN explicit url_error(const std::string&);
     /// @endcond
@@ -40,10 +41,10 @@ struct url_error : public error {
 ///
 ///  Proton URLs take the form
 /// `<scheme>://<username>:<password>@<host>:<port>/<path>`.
-///    
+///
 /// - Scheme can be `amqp` or `amqps`.  Host is a DNS name or IP
 ///   address (v4 or v6).
-///    
+///
 /// - Port can be a number or a symbolic service name such as `amqp`.
 ///
 /// - Path is normally used as a link source or target address.  On a
@@ -107,7 +108,7 @@ class url {
     PN_CPP_EXTERN std::string username() const;
     PN_CPP_EXTERN void username(const std::string&);
     /// @endcond
-    
+
     PN_CPP_EXTERN std::string password() const;
     PN_CPP_EXTERN void password(const std::string&);
 
@@ -133,11 +134,10 @@ class url {
     PN_CPP_EXTERN void defaults();
     /// @endcond
 
+    /// @cond INTERNAL
   private:
     pn_url_t* url_;
 
-    /// @cond INTERNAL
-    
     friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const url&);
 
     /// Parse `url` from istream.  This automatically fills in

@@ -21,6 +21,7 @@
 
 #include "options.hpp"
 
+#include "proton/binary.hpp"
 #include "proton/container.hpp"
 #include "proton/handler.hpp"
 #include "proton/connection.hpp"
@@ -46,10 +47,9 @@ class reactor_send : public proton::handler {
     int total_;
     int received_;
     size_t received_bytes_;
-    proton::amqp_binary received_content_;
+    proton::binary received_content_;
     bool replying_;
     proton::message_id id_value_;
-    proton::reactor reactor_;
   public:
 
     reactor_send(const std::string &url, int c, int size, bool replying)
@@ -58,14 +58,13 @@ class reactor_send : public proton::handler {
           received_(0), received_bytes_(0), replying_(replying) {
         if (replying_)
             message_.reply_to("localhost/test");
-        proton::amqp_binary content;
+        proton::binary content;
         content.assign((size_t) size, 'X');
         message_.body(content);
     }
 
     void on_start(proton::event &e) {
         e.container().open_sender(url_);
-        reactor_ = e.container().reactor();
     }
 
     void on_sendable(proton::event &e) {
@@ -74,8 +73,7 @@ class reactor_send : public proton::handler {
         while (sender.credit() && sent_ < total_) {
             id_value_ = sent_ + 1;
             message_.correlation_id(id_value_);
-            proton::amqp_timestamp reactor_now(reactor_.now());
-            message_.creation_time(reactor_now);
+            message_.creation_time(proton::timestamp::now());
             sender.send(message_);
             sent_++;
         }
@@ -93,7 +91,7 @@ class reactor_send : public proton::handler {
 
     void on_message(proton::event &e) {
         proton::message &msg = e.message();
-        msg.body().decode() >> received_content_;
+        received_content_ = msg.body().get<proton::binary>();
         received_bytes_ += received_content_.size();
         if (received_ < total_) {
             received_++;

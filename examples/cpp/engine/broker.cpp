@@ -24,7 +24,6 @@
 
 #include <iostream>
 
-// FIXME aconway 2016-01-23: port broker to windows, need io::poller.
 #ifdef WIN32
 #include "proton/acceptor.hpp"
 #include "proton/container.hpp"
@@ -80,7 +79,7 @@ int main(int argc, char **argv) {
 
 template <class T> T check(T result, const std::string& msg="io_error: ") {
     if (result < 0)
-        throw proton::io_error(msg + proton::io::error_str());
+        throw proton::connection_engine::io_error(msg + proton::io::error_str());
     return result;
 }
 

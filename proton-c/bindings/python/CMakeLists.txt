@@ -23,9 +23,8 @@
 set(CMAKE_SWIG_FLAGS "-threads")
 
 include_directories (${PYTHON_INCLUDE_PATH})
-if (BUILD_WITH_CXX)
-   SET_SOURCE_FILES_PROPERTIES(cproton.i PROPERTIES CPLUSPLUS ON)
-endif (BUILD_WITH_CXX)
+
+set_source_files_properties(cproton.i PROPERTIES CPLUSPLUS NO)
 
 list(APPEND SWIG_MODULE_cproton_EXTRA_DEPS
     ${CMAKE_SOURCE_DIR}/proton-c/include/proton/cproton.i
@@ -93,7 +92,7 @@ if (EPYDOC_EXE)
    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html/"
            DESTINATION "${PROTON_SHARE}/docs/api-py"
            COMPONENT documentation
-           ${OPTIONAL_ARG})
+           OPTIONAL)
 endif (EPYDOC_EXE)
 
 find_program(SPHINX_EXE sphinx-build)
@@ -106,7 +105,7 @@ if (SPHINX_EXE)
    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/tutorial/"
            DESTINATION "${PROTON_SHARE}/docs/tutorial-py"
            COMPONENT documentation
-           ${OPTIONAL_ARG})
+           OPTIONAL)
 endif (SPHINX_EXE)
 
 install(FILES ${CPROTON_ARTIFACTS}

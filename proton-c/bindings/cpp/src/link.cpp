@@ -86,7 +86,7 @@ class session link::session() const {
 
 void link::handler(proton_handler &h) {
     pn_record_t *record = pn_link_attachments(pn_object());
-    pn_ptr<pn_handler_t> chandler = connection().container().impl_->cpp_handler(&h);
+    internal::pn_ptr<pn_handler_t> chandler = connection().container().impl_->cpp_handler(&h);
     pn_record_set_handler(record, chandler.get());
 }
 
@@ -115,11 +115,6 @@ bool link::advance() {
     return pn_link_advance(pn_object());
 }
 
-link link::next(endpoint::state s) const
-{
-    return pn_link_next(pn_object(), s);
-}
-
 link_options::sender_settle_mode link::sender_settle_mode() {
     return (link_options::sender_settle_mode) pn_link_snd_settle_mode(pn_object());
 }
@@ -142,6 +137,13 @@ link_options::sender_settle_mode link::remote_sender_settle_mode() {
 
 link_options::receiver_settle_mode link::remote_receiver_settle_mode() {
     return (link_options::receiver_settle_mode) pn_link_remote_rcv_settle_mode(pn_object());
+}
+
+link_iterator link_iterator::operator++() {
+    do {
+        obj_ = pn_link_next(obj_.pn_object(), 0);
+    } while (!!obj_ && obj_.session().pn_object() != session_);
+    return *this;
 }
 
 }

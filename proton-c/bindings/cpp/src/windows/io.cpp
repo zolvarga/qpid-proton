@@ -54,13 +54,13 @@ namespace {
 
 template <class T> T check(T result, const std::string& msg=std::string()) {
     if (result == SOCKET_ERROR)
-        throw io_error(msg + error_str());
+        throw connection_engine::io_error(msg + error_str());
     return result;
 }
 
 void gai_check(int result, const std::string& msg="") {
     if (result)
-        throw io_error(msg + gai_strerror(result));
+        throw connection_engine::io_error(msg + gai_strerror(result));
 }
 } // namespace
 
@@ -98,7 +98,7 @@ std::pair<size_t, bool> socket_engine::io_read(char *buf, size_t size) {
     if (n == 0) return std::make_pair(0, false);
     if (n == SOCKET_ERROR && WSAGetLastError() == WSAEWOULDBLOCK)
         return std::make_pair(0, true);
-    throw io_error("read: " + error_str());
+    throw connection_engine::io_error("read: " + error_str());
 }
 
 size_t socket_engine::io_write(const char *buf, size_t size) {
@@ -182,8 +182,7 @@ listener::listener(const std::string& host, const std::string &port) : socket_(I
 listener::~listener() { ::closesocket(socket_); }
 
 descriptor listener::accept(std::string& host_str, std::string& port_str) {
-    struct sockaddr_in addr;
-    ::memset(&addr, 0, sizeof(addr));
+    struct sockaddr_storage addr;
     socklen_t size = sizeof(addr);
     int fd = check(::accept(socket_, (struct sockaddr *)&addr, &size), "accept: ");
     char host[NI_MAXHOST], port[NI_MAXSERV];

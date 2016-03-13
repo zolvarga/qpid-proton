@@ -78,7 +78,7 @@ class queue {
         if (!s && count) {
             s = &*it;
         }
-            
+
         while (messages_.size()) {
             if (s->credit()) {
                 const proton::message& m = messages_.front();
@@ -87,14 +87,14 @@ class queue {
                 messages_.pop_front();
                 result = true;
             }
-            
+
             if (--count) {
                 it++;
             } else {
                 return result;
             }
         }
-        
+
         return false;
     }
 
@@ -199,20 +199,18 @@ class broker_handler : public proton::handler {
     }
 
     void on_transport_error(proton::event &e) {
-        std::cout << "broker client disconnect: " << e.transport().condition().str() << std::endl;
+        std::cout << "broker client disconnect: " << e.transport().condition().what() << std::endl;
     }
 
     void on_unhandled_error(proton::event &e, const proton::condition &c) {
-        std::cerr << "broker error: " << e.name() << ":" << c.str() << std::endl;
+        std::cerr << "broker error: " << e.name() << ":" << c.what() << std::endl;
     }
 
     void remove_stale_consumers(proton::connection connection) {
-        proton::link_range r = connection.find_links(proton::endpoint::REMOTE_ACTIVE);
-
+        proton::link_range r = connection.links();
         for (proton::link_iterator l = r.begin(); l != r.end(); ++l) {
-            if (!!l->sender()) {
+            if ((l->state() & proton::endpoint::REMOTE_ACTIVE) && !!l->sender())
                 unsubscribe(l->sender());
-            }
         }
     }
 
@@ -226,7 +224,6 @@ class broker_handler : public proton::handler {
 
     void on_message(proton::event &e) {
         std::string address = e.link().local_target().address();
-        
         queues_.get(address).publish(e.message(), e.link().receiver());
     }
 

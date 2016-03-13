@@ -22,9 +22,9 @@
  *
  */
 
-#include "proton/reactor.h"
-#include "proton/export.hpp"
-#include "proton/object.hpp"
+#include <proton/reactor.h>
+#include <proton/export.hpp>
+#include <proton/object.hpp>
 
 struct pn_connection_t;
 
@@ -33,13 +33,13 @@ namespace proton {
 /// A context for accepting inbound connections.
 ///
 /// @see container::listen
-class acceptor : public object<pn_acceptor_t>
-{
-  public:
+class acceptor : public internal::object<pn_acceptor_t> {
     /// @cond INTERNAL
-    /// XXX important to expose?
-    acceptor(pn_acceptor_t* a=0) : object<pn_acceptor_t>(a) {}
+    acceptor(pn_acceptor_t* a) : internal::object<pn_acceptor_t>(a) {}
     /// @endcond
+
+  public:
+    acceptor() : internal::object<pn_acceptor_t>(0) {}
 
     /// Close the acceptor.
     PN_CPP_EXTERN void close();
@@ -50,8 +50,13 @@ class acceptor : public object<pn_acceptor_t>
     /// Note that changes made to the connection options only affect
     /// connections accepted after this call returns.
     PN_CPP_EXTERN class connection_options &connection_options();
+
+    /// @cond INTERNAL
+    friend class reactor;
+    friend class container_impl;
+    /// @endcond
 };
 
 }
 
-#endif  // PROTON_CPP_ACCEPTOR_H
+#endif // PROTON_CPP_ACCEPTOR_H

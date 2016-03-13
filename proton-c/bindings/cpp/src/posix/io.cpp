@@ -18,10 +18,12 @@
  */
 
 #include "msg.hpp"
+
 #include <proton/io.hpp>
 #include <proton/url.hpp>
 
 #include <errno.h>
+#include <string.h>
 #include <fcntl.h>
 #include <netdb.h>
 #include <sys/socket.h>
@@ -48,12 +50,12 @@ std::string error_str() {
 namespace {
 
 template <class T> T check(T result, const std::string& msg=std::string()) {
-    if (result < 0) throw io_error(msg + error_str());
+    if (result < 0) throw connection_engine::io_error(msg + error_str());
     return result;
 }
 
 void gai_check(int result, const std::string& msg="") {
-    if (result) throw io_error(msg + gai_strerror(result));
+    if (result) throw connection_engine::io_error(msg + gai_strerror(result));
 }
 
 }
@@ -155,8 +157,7 @@ listener::listener(const std::string& host, const std::string &port) : socket_(I
 listener::~listener() { ::close(socket_); }
 
 descriptor listener::accept(std::string& host_str, std::string& port_str) {
-    struct sockaddr_in addr;
-    ::memset(&addr, 0, sizeof(addr));
+    struct sockaddr_storage addr;
     socklen_t size = sizeof(addr);
     int fd = check(::accept(socket_, (struct sockaddr *)&addr, &size), "accept: ");
     char host[NI_MAXHOST], port[NI_MAXSERV];

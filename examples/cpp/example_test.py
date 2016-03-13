@@ -53,7 +53,7 @@ class Proc(Popen):
     else:
         env_args = []
 
-    def __init__(self, args, ready=None, timeout=10, skip_valgrind=False, **kwargs):
+    def __init__(self, args, ready=None, timeout=30, skip_valgrind=False, **kwargs):
         """Start an example process"""
         args = list(args)
         if platform.system() == "Windows":
@@ -288,6 +288,7 @@ map{string(one):int(1), string(two):int(2)}
 { one:1 two:2 }
 map{string(z):int(3), string(a):int(4)}
 [ z:3 a:4 ]
+list[string(a), string(b), string(c)]
 
 == List and map of mixed type values.
 list[int(42), string(foo)]

@@ -27,12 +27,13 @@
 #include "proton/connection.hpp"
 #include "proton/container.hpp"
 #include "proton/connection_engine.hpp"
-#include "proton/id_generator.hpp"
 
+#include "id_generator.hpp"
 #include "proton_handler.hpp"
 
 struct pn_session_t;
 struct pn_event_t;
+struct pn_reactor_t;
 struct pn_record_t;
 struct pn_acceptor_t;
 
@@ -87,7 +88,7 @@ class connection_context : public context {
     message event_message;      // re-used by messaging_adapter for performance.
     id_generator link_gen;      // Link name generator.
 
-    pn_unique_ptr<proton_handler> handler;
+    internal::pn_unique_ptr<proton_handler> handler;
 
     static connection_context& get(pn_connection_t *c) { return ref<connection_context>(id(c)); }
     static connection_context& get(const connection& c) { return ref<connection_context>(id(c)); }

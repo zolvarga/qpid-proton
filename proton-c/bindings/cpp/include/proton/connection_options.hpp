@@ -22,14 +22,18 @@
  *
  */
 
-#include "proton/config.hpp"
-#include "proton/export.hpp"
-#include "proton/pn_unique_ptr.hpp"
-#include "proton/reconnect_timer.hpp"
-#include "proton/types.hpp"
+#include <proton/config.hpp>
+#include <proton/export.hpp>
+#include <proton/duration.hpp>
+#include <proton/pn_unique_ptr.hpp>
+#include <proton/reconnect_timer.hpp>
+#include <proton/types_fwd.hpp>
+
 
 #include <vector>
 #include <string>
+
+struct pn_connection_t;
 
 namespace proton {
 
@@ -70,6 +74,8 @@ class connection_options {
     /// Copy options.
     PN_CPP_EXTERN connection_options& operator=(const connection_options&);
 
+    // XXX add C++11 move operations
+
     /// Override with options from other.
     PN_CPP_EXTERN void override(const connection_options& other);
 
@@ -82,6 +88,7 @@ class connection_options {
     /// Set the maximum channels.
     PN_CPP_EXTERN connection_options& max_channels(uint16_t max);
 
+    // XXX document relationship to heartbeat interval
     /// Set the idle timeout.
     PN_CPP_EXTERN connection_options& idle_timeout(duration);
 
@@ -95,10 +102,12 @@ class connection_options {
 
     /// @cond INTERNAL
 
-    /// XXX more discussion
+    /// XXX more discussion - not clear we want to support this
+    /// capability
     PN_CPP_EXTERN connection_options& link_prefix(const std::string &id);
 
-    /// XXX settle questions about reconnect_timer
+    /// XXX settle questions about reconnect_timer - consider simply
+    /// reconnect_options and making reconnect_timer internal
     PN_CPP_EXTERN connection_options& reconnect(const reconnect_timer &);
 
     /// @endcond
@@ -109,31 +118,27 @@ class connection_options {
     /// Set SSL server options.
     PN_CPP_EXTERN connection_options& ssl_server_options(const class ssl_server_options &);
 
-    /// @cond INTERNAL
-
-    /// XXX remove
-    PN_CPP_EXTERN connection_options& peer_hostname(const std::string &name);
-
-    /// XXX ssl_ prefix
-    PN_CPP_EXTERN connection_options& resume_id(const std::string &id);
-    
-    /// @endcond
-
     /// Enable or disable SASL.
     PN_CPP_EXTERN connection_options& sasl_enabled(bool);
-    
-    /// @cond INTERNAL
-    /// XXX sasl_ prefix
-    PN_CPP_EXTERN connection_options& allow_insecure_mechs(bool);
-    PN_CPP_EXTERN connection_options& allowed_mechs(const std::string &);
-    /// @endcond
+
+    /// Force the enabling of SASL mechanisms that disclose clear text
+    /// passwords over the connection.  By default, such mechanisms
+    /// are disabled.
+    PN_CPP_EXTERN connection_options& sasl_allow_insecure_mechs(bool);
+
+    /// Specify the allowed mechanisms for use on the connection.
+    PN_CPP_EXTERN connection_options& sasl_allowed_mechs(const std::string &);
 
     /// Set the SASL configuration name.
     PN_CPP_EXTERN connection_options& sasl_config_name(const std::string &);
 
+    /// @cond INTERNAL
+    /// XXX not clear this should be exposed
     /// Set the SASL configuration path.
     PN_CPP_EXTERN connection_options& sasl_config_path(const std::string &);
+    /// @endcond
 
+    /// @cond INTERNAL
   private:
     void apply(connection&) const;
     proton_handler* handler() const;
@@ -142,9 +147,8 @@ class connection_options {
     class ssl_server_options &ssl_server_options();
 
     class impl;
-    pn_unique_ptr<impl> impl_;
+    internal::pn_unique_ptr<impl> impl_;
 
-    /// @cond INTERNAL
     friend class container_impl;
     friend class connector;
     friend class connection_engine;

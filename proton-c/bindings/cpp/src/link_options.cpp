@@ -18,6 +18,8 @@
  * under the License.
  *
  */
+
+#include "proton/binary.hpp"
 #include "proton/link.hpp"
 #include "proton/link_options.hpp"
 #include "proton/handler.hpp"
@@ -106,13 +108,13 @@ class link_options::impl {
                     if (lifetime_policy.set) lp = lifetime_policy_symbol(lifetime_policy.value);
                     if (!sender && distribution_mode.set) dm = distribution_mode_symbol(distribution_mode.value);
                     if (lp.size() || dm.size()) {
-                        encoder enc = t.node_properties().encode();
-                        enc << start::map();
+                        codec::encoder enc(t.node_properties());
+                        enc << codec::start::map();
                         if (dm.size())
-                            enc << amqp_symbol("supported-dist-modes") << amqp_string(dm);
+                            enc << symbol("supported-dist-modes") << std::string(dm);
                         if (lp.size())
-                            enc << amqp_symbol("lifetime-policy") << start::described()
-                                << amqp_symbol(lp) << start::list() << finish();
+                            enc << symbol("lifetime-policy") << codec::start::described()
+                                << symbol(lp) << codec::start::list() << codec::finish();
                     }
                 }
             }
@@ -124,9 +126,9 @@ class link_options::impl {
                     l.local_source().expiry_policy(terminus::EXPIRE_NEVER);
                 }
                 if (selector.set && selector.value.size()) {
-                    encoder enc = l.local_source().filter().encode();
-                    enc << start::map() << amqp_symbol("selector") << start::described()
-                        << amqp_symbol("apache.org:selector-filter:string") << amqp_binary(selector.value) << finish();
+                    codec::encoder enc(l.local_source().filter());
+                    enc << codec::start::map() << symbol("selector") << codec::start::described()
+                        << symbol("apache.org:selector-filter:string") << binary(selector.value) << codec::finish();
                 }
             }
         }

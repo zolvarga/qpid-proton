@@ -33,19 +33,21 @@ namespace proton {
 
 /// Describes an endpoint error state.
 class condition {
-  public:
     /// @cond INTERNAL
     condition(pn_condition_t* c) : condition_(c) {}
     /// @endcond
 
-    /// @cond INTERNAL
-    /// XXX want to discuss
+  public:
+    condition() : condition_(0) {}
+
     /// No condition set.
     PN_CPP_EXTERN bool operator!() const;
 
+    /// XXX add C++11 explicit bool conversion with a note about
+    /// C++11-only usage
+
     /// No condition has been set.
     PN_CPP_EXTERN bool empty() const;
-    /// @endcond
 
     /// Condition name.
     PN_CPP_EXTERN std::string name() const;
@@ -53,14 +55,21 @@ class condition {
     /// Descriptive string for condition.
     PN_CPP_EXTERN std::string description() const;
 
-    /// Extra information for condition n*/
+    /// Extra information for condition.
     PN_CPP_EXTERN value info() const;
 
     /// Simple printable string for condition.
-    PN_CPP_EXTERN std::string str() const;
+    PN_CPP_EXTERN std::string what() const;
 
+    /// @cond INTERNAL
   private:
     pn_condition_t* condition_;
+
+    friend class transport;
+    friend class connection;
+    friend class session;
+    friend class link;
+    /// @endcond
 };
 
 }

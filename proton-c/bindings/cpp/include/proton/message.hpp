@@ -22,12 +22,13 @@
  *
  */
 
-#include "proton/export.hpp"
-#include "proton/message_id.hpp"
-#include "proton/annotation_key.hpp"
-#include "proton/pn_unique_ptr.hpp"
-#include "proton/value.hpp"
-#include "proton/duration.hpp"
+#include <proton/map.hpp>
+#include <proton/annotation_key.hpp>
+#include <proton/duration.hpp>
+#include <proton/export.hpp>
+#include <proton/message_id.hpp>
+#include <proton/pn_unique_ptr.hpp>
+#include <proton/value.hpp>
 
 #include <string>
 #include <vector>
@@ -59,13 +60,16 @@ class message {
     /// Copy a message.
     PN_CPP_EXTERN message(const message&);
 
-#if PN_HAS_CPP11
+#if PN_CPP_HAS_CPP11
+    /// Move a message.
     PN_CPP_EXTERN message(message&&);
+
+    // XXX move assignment operator? - do this in general for CPP11
 #endif
 
     /// Create a message with its body set from any value that can be
-    /// assigned to a proton::value.
-    template <class T> message(const T& x) : pn_msg_(0) { body() = x; }
+    /// converted to a proton::value.
+    PN_CPP_EXTERN message(const value& x);
 
     PN_CPP_EXTERN ~message();
 
@@ -84,6 +88,7 @@ class message {
     /// @cond INTERNAL
     /// XXX consider just user, in order to be consistent with similar
     /// fields elsewhere in the API
+    /// XXX ask gordon about use case - decision sort of: "user" instead of "user_id"
     PN_CPP_EXTERN void user_id(const std::string &user);
     PN_CPP_EXTERN std::string user_id() const;
     /// @endcond
@@ -98,13 +103,6 @@ class message {
     /// Decode from string data into the message.
     PN_CPP_EXTERN void decode(const std::vector<char> &bytes);
 
-    /// @cond INTERNAL
-    /// XXX should a delivery know its own link already?
-    ///
-    /// Decode the message corresponding to a delivery from a link.
-    PN_CPP_EXTERN void decode(proton::link, proton::delivery);
-    /// @endcond
-
     /// @}
 
     /// @name Routing
@@ -112,7 +110,7 @@ class message {
 
     PN_CPP_EXTERN void address(const std::string &addr);
     PN_CPP_EXTERN std::string address() const;
-    
+
     PN_CPP_EXTERN void reply_to(const std::string &addr);
     PN_CPP_EXTERN std::string reply_to() const;
 
@@ -124,8 +122,8 @@ class message {
     /// @name Content
     /// @{
 
-    /// Set the body, equivalent to body() = v
-    template<class T> void body(const T& v) { body() = v; }
+    /// Set the body, equivalent to body() = x
+    PN_CPP_EXTERN void body(const value& x);
 
     /// Get the body.
     PN_CPP_EXTERN const value& body() const;
@@ -142,11 +140,11 @@ class message {
     PN_CPP_EXTERN void content_encoding(const std::string &s);
     PN_CPP_EXTERN std::string content_encoding() const;
 
-    PN_CPP_EXTERN void expiry_time(amqp_timestamp t);
-    PN_CPP_EXTERN amqp_timestamp expiry_time() const;
+    PN_CPP_EXTERN void expiry_time(timestamp t);
+    PN_CPP_EXTERN timestamp expiry_time() const;
 
-    PN_CPP_EXTERN void creation_time(amqp_timestamp t);
-    PN_CPP_EXTERN amqp_timestamp creation_time() const;
+    PN_CPP_EXTERN void creation_time(timestamp t);
+    PN_CPP_EXTERN timestamp creation_time() const;
 
     /// Get the inferred flag for a message.
     ///
@@ -158,6 +156,7 @@ class message {
     /// body of the message will be encoded as AMQP VALUE sections
     /// regardless of their type.
     PN_CPP_EXTERN bool inferred() const;
+
     /// Set the inferred flag for a message.
     PN_CPP_EXTERN void inferred(bool);
 
@@ -259,6 +258,7 @@ class message {
 
     /// @}
 
+    /// @cond INTERNAL
   private:
     pn_message_t *pn_msg() const;
 
@@ -268,9 +268,11 @@ class message {
     mutable annotation_map message_annotations_;
     mutable annotation_map delivery_annotations_;
 
-    /// @cond INTERNAL
-    /// XXX settle necessity (there were some other options)
-    friend PN_CPP_EXTERN void swap(message&, message&);
+    /// Decode the message corresponding to a delivery from a link.
+    void decode(proton::delivery);
+
+    PN_CPP_EXTERN friend void swap(message&, message&);
+    friend class messaging_adapter;
     /// @endcond
 };
 

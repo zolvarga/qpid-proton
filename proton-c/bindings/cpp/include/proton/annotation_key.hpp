@@ -20,55 +20,45 @@
  * under the License.
  */
 
-#include "proton/types.hpp"
-#include "proton/scalar.hpp"
+#include <proton/scalar.hpp>
+#include <proton/symbol.hpp>
 
 namespace proton {
-    
-class encoder;
-class decoder;
 
 /// A key for use with AMQP annotation maps.
 ///
-/// An annotation_key can contain either a uint64_t or a
-/// proton::amqp::amqp_symbol.
+/// An annotation_key can contain either a uint64_t or a proton::symbol.
 class annotation_key : public restricted_scalar {
   public:
-    /// Create an empty key.
+    /// An empty annotation key has a uint64_t == 0 value.
     annotation_key() { scalar_ = uint64_t(0); }
+    annotation_key(const annotation_key& x) { scalar_ = x; }
+    annotation_key& operator=(const annotation_key& x) { scalar_ = x; return *this; }
 
-    /// @name Assignment operators
-    ///
-    /// Assign a C++ value, deducing the AMQP type().
-    ///
-    /// @{
+    annotation_key(uint64_t x) { scalar_ = x; }
+    annotation_key(const symbol& x) { scalar_ = x; }
+
+    ///@name Extra conversions for strings, treated as amqp::SYMBOL.
+    ///@{
+    annotation_key(const std::string& x) { scalar_ = symbol(x); }
+    annotation_key(const char *x) {scalar_ = symbol(x); }
+    ///@}
+
     annotation_key& operator=(uint64_t x) { scalar_ = x; return *this; }
-    annotation_key& operator=(const amqp_symbol& x) { scalar_ = x; return *this; }
-    /// `std::string` is encoded as proton::amqp::amqp_symbol.
-    annotation_key& operator=(const std::string& x) { scalar_ = amqp_symbol(x); return *this; }
-    /// `char*` is encoded as proton::amqp::amqp_symbol.
-    annotation_key& operator=(const char *x) { scalar_ = amqp_symbol(x); return *this; }
-    /// @}
-
-    /// A constructor that converts from any type that we can assign
-    /// from.
-    template <class T> annotation_key(T x) { *this = x; }
+    annotation_key& operator=(const symbol& x) { scalar_ = x; return *this; }
 
     /// @name Get methods
     ///
     /// @{
     void get(uint64_t& x) const { scalar_.get(x); }
-    void get(amqp_symbol& x) const { scalar_.get(x); }
+    void get(symbol& x) const { scalar_.get(x); }
     /// @}
 
     /// Return the value as type T.
     template<class T> T get() const { T x; get(x); return x; }
 
-    /// @cond INTERNAL
-    friend PN_CPP_EXTERN encoder operator<<(encoder, const annotation_key&);
-    friend PN_CPP_EXTERN decoder operator>>(decoder, annotation_key&);
-    friend class message;
-    /// @endcond
+  friend class message;
+  friend class codec::decoder;
 };
 
 }

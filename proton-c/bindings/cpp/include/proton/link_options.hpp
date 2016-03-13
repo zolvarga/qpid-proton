@@ -86,7 +86,7 @@ class link_options {
     /// Receiver settlement behaviour for a link.
     enum receiver_settle_mode {
         SETTLE_ALWAYS = PN_RCV_FIRST,
-        SETTLE_SECOND= PN_RCV_SECOND
+        SETTLE_SECOND = PN_RCV_SECOND
     };
     /// @endcond
 
@@ -164,14 +164,14 @@ class link_options {
     PN_CPP_EXTERN link_options& selector(const std::string &str);
     /// @endcond
 
+    /// @cond INTERNAL
   private:
     void apply(link&) const;
     proton_handler* handler() const;
 
     class impl;
-    pn_unique_ptr<impl> impl_;
+    internal::pn_unique_ptr<impl> impl_;
 
-    /// @cond INTERNAL
     friend class link;
     /// @endcond
 };

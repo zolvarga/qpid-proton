@@ -22,13 +22,15 @@
  *
  */
 
-#include "proton/endpoint.hpp"
-#include "proton/export.hpp"
-#include "proton/message.hpp"
-#include "proton/terminus.hpp"
-#include "proton/types.h"
-#include "proton/object.hpp"
-#include "proton/link_options.hpp"
+#include <proton/endpoint.hpp>
+#include <proton/export.hpp>
+#include <proton/message.hpp>
+#include <proton/terminus.hpp>
+
+#include <proton/object.hpp>
+#include <proton/link_options.hpp>
+
+#include <proton/types.h>
 
 #include <string>
 
@@ -40,11 +42,14 @@ class condition;
 
 /// A named channel for sending or receiving messages.  It is the base
 /// class for sender and receiver.
-class link : public object<pn_link_t> , public endpoint {
-  public:
+class
+PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint {
     /// @cond INTERNAL
-    link(pn_link_t* l=0) : object<pn_link_t>(l) {}
+    link(pn_link_t* l) : internal::object<pn_link_t>(l) {}
     /// @endcond
+
+  public:
+    link() : internal::object<pn_link_t>(0) {}
 
     // Endpoint behaviours
 
@@ -94,6 +99,7 @@ class link : public object<pn_link_t> , public endpoint {
 
     /// @cond INTERNAL
     /// XXX revisit mind-melting API inherited from C
+    /// XXX flush() ? drain, and drain_completed (sender and receiver ends)
     PN_CPP_EXTERN int drained();
     /// @endcond
 
@@ -118,63 +124,50 @@ class link : public object<pn_link_t> , public endpoint {
     /// Session that owns this link.
     PN_CPP_EXTERN class session session() const;
 
-    /// @cond INTERNAL
-    /// XXX settle open questions
-
-    /// Set a custom handler for this link.
-    PN_CPP_EXTERN void handler(proton_handler &);
-
-    /// Unset any custom handler.
-    PN_CPP_EXTERN void detach_handler();
-
-    /// @cond INTERNAL
-
-    /// XXX ask about use case, revisit names
-    /// Get message data from current delivery on link.
-    PN_CPP_EXTERN ssize_t recv(char* buffer, size_t size);
-
-    /// XXX ask about use case, revisit names
-    /// Advance the link one delivery.
-    PN_CPP_EXTERN bool advance();
-
-    /// XXX remove
-    /// Navigate the links in a connection - get next link with state.
-    PN_CPP_EXTERN link next(endpoint::state) const;
-
     /// XXX local versus remote, mutability
+    /// XXX - local_sender_settle_mode and local_receiver_settle_mode
     PN_CPP_EXTERN link_options::sender_settle_mode sender_settle_mode();
-    PN_CPP_EXTERN void sender_settle_mode(link_options::sender_settle_mode);
     PN_CPP_EXTERN link_options::receiver_settle_mode receiver_settle_mode();
-    PN_CPP_EXTERN void receiver_settle_mode(link_options::receiver_settle_mode);
     PN_CPP_EXTERN link_options::sender_settle_mode remote_sender_settle_mode();
     PN_CPP_EXTERN link_options::receiver_settle_mode remote_receiver_settle_mode();
 
-    /// @endcond
+  private:
+    // Used by link_options
+    void handler(proton_handler &);
+    void detach_handler();
+    void sender_settle_mode(link_options::sender_settle_mode);
+    void receiver_settle_mode(link_options::receiver_settle_mode);
+    // Used by message to decode message from a delivery
+    ssize_t recv(char* buffer, size_t size);
+    bool advance();
+
+  friend class connection;
+  friend class delivery;
+  friend class receiver;
+  friend class sender;
+  friend class message;
+  friend class proton_event;
+  friend class link_iterator;
+  friend class link_options;
 };
 
-/// @cond INTERNAL
-/// XXX important to expose?
 /// An iterator for links.
-class link_iterator : public iter_base<link> {
+class link_iterator : public internal::iter_base<link, link_iterator> {
   public:
-    explicit link_iterator(link p = 0, endpoint::state s = 0) :
-        iter_base<link>(p, s), session_(0) {}
-    explicit link_iterator(const link_iterator& i, const session& ssn) :
-        iter_base<link>(i.ptr_, i.state_), session_(&ssn) {}
+    explicit link_iterator(link l = 0, pn_session_t* s = 0) :
+        internal::iter_base<link, link_iterator>(l), session_(s) {}
     PN_CPP_EXTERN link_iterator operator++();
-    link_iterator operator++(int) { link_iterator x(*this); ++(*this); return x; }
 
   private:
-    const session* session_;
+    pn_session_t* session_;
 };
-/// @endcond
 
 /// A range of links.
-typedef range<link_iterator> link_range;
+typedef internal::iter_range<link_iterator> link_range;
 
 }
 
-#include "proton/sender.hpp"
-#include "proton/receiver.hpp"
+#include <proton/sender.hpp>
+#include <proton/receiver.hpp>
 
 #endif // PROTON_CPP_LINK_H

@@ -18,15 +18,24 @@
  */
 
 #include "msg.hpp"
+#include "types_internal.hpp"
+
+#include "proton/binary.hpp"
+#include "proton/decimal.hpp"
 #include "proton/scalar.hpp"
+#include "proton/symbol.hpp"
+#include "proton/timestamp.hpp"
 #include "proton/type_traits.hpp"
+#include "proton/uuid.hpp"
 
 #include <ostream>
 
 namespace proton {
 
 scalar::scalar() { atom_.type = PN_NULL; }
+scalar::scalar(const pn_atom_t& a) { set(a); }
 scalar::scalar(const scalar& x) { set(x.atom_); }
+
 scalar& scalar::operator=(const scalar& x) {
     if (this != &x)
         set(x.atom_);
@@ -34,20 +43,43 @@ scalar& scalar::operator=(const scalar& x) {
 }
 
 type_id scalar::type() const { return type_id(atom_.type); }
+
 bool scalar::empty() const { return type() == NULL_TYPE; }
 
-void scalar::set(const std::string& x, pn_type_t t) {
+void scalar::set(const binary& x, pn_type_t t) {
     atom_.type = t;
-    str_ = x;
-    atom_.u.as_bytes = pn_bytes(str_);
+    bytes_ = x;
+    atom_.u.as_bytes = pn_bytes(bytes_);
 }
 
 void scalar::set(const pn_atom_t& atom) {
     if (type_id_is_string_like(type_id(atom.type)))
-        set(str(atom.u.as_bytes), atom.type);
+        set(bin(atom.u.as_bytes), atom.type);
     else
         atom_ = atom;
 }
+
+scalar::scalar(bool x) { *this = x; }
+scalar::scalar(uint8_t x) { *this = x; }
+scalar::scalar(int8_t x) { *this = x; }
+scalar::scalar(uint16_t x) { *this = x; }
+scalar::scalar(int16_t x) { *this = x; }
+scalar::scalar(uint32_t x) { *this = x; }
+scalar::scalar(int32_t x) { *this = x; }
+scalar::scalar(uint64_t x) { *this = x; }
+scalar::scalar(int64_t x) { *this = x; }
+scalar::scalar(wchar_t x) { *this = x; }
+scalar::scalar(float x) { *this = x; }
+scalar::scalar(double x) { *this = x; }
+scalar::scalar(timestamp x) { *this = x; }
+scalar::scalar(const decimal32& x) { *this = x; }
+scalar::scalar(const decimal64& x) { *this = x; }
+scalar::scalar(const decimal128& x) { *this = x; }
+scalar::scalar(const uuid& x) { *this = x; }
+scalar::scalar(const std::string& x) { *this = x; }
+scalar::scalar(const symbol& x) { *this = x; }
+scalar::scalar(const binary& x) { *this = x; }
+scalar::scalar(const char* x) { *this = x; }
 
 scalar& scalar::operator=(bool x) { atom_.u.as_bool = x; atom_.type = PN_BOOL; return *this; }
 scalar& scalar::operator=(uint8_t x) { atom_.u.as_ubyte = x; atom_.type = PN_UBYTE; return *this; }
@@ -61,19 +93,39 @@ scalar& scalar::operator=(int64_t x) { atom_.u.as_long = x; atom_.type = PN_LONG
 scalar& scalar::operator=(wchar_t x) { atom_.u.as_char = x; atom_.type = PN_CHAR; return *this; }
 scalar& scalar::operator=(float x) { atom_.u.as_float = x; atom_.type = PN_FLOAT; return *this; }
 scalar& scalar::operator=(double x) { atom_.u.as_double = x; atom_.type = PN_DOUBLE; return *this; }
-scalar& scalar::operator=(amqp_timestamp x) { atom_.u.as_timestamp = x; atom_.type = PN_TIMESTAMP; return *this; }
-scalar& scalar::operator=(const amqp_decimal32& x) { atom_.u.as_decimal32 = x; atom_.type = PN_DECIMAL32; return *this; }
-scalar& scalar::operator=(const amqp_decimal64& x) { atom_.u.as_decimal64 = x; atom_.type = PN_DECIMAL64; return *this; }
-scalar& scalar::operator=(const amqp_decimal128& x) { atom_.u.as_decimal128 = x; atom_.type = PN_DECIMAL128; return *this; }
-scalar& scalar::operator=(const amqp_uuid& x) { atom_.u.as_uuid = x; atom_.type = PN_UUID; return *this; }
-scalar& scalar::operator=(const amqp_string& x) { set(x, PN_STRING); return *this; }
-scalar& scalar::operator=(const amqp_symbol& x) { set(x, PN_SYMBOL); return *this; }
-scalar& scalar::operator=(const amqp_binary& x) { set(x, PN_BINARY); return *this; }
-scalar& scalar::operator=(const std::string& x) { set(x, PN_STRING); return *this; }
-scalar& scalar::operator=(const char* x) { set(x, PN_STRING); return *this; }
+scalar& scalar::operator=(timestamp x) { atom_.u.as_timestamp = x.ms(); atom_.type = PN_TIMESTAMP; return *this; }
+
+scalar& scalar::operator=(const decimal32& x) {
+    byte_copy(atom_.u.as_decimal32, x);
+    atom_.type = PN_DECIMAL32;
+    return *this;
+}
+
+scalar& scalar::operator=(const decimal64& x) {
+    byte_copy(atom_.u.as_decimal64, x);
+    atom_.type = PN_DECIMAL64;
+    return *this;
+}
+
+scalar& scalar::operator=(const decimal128& x) {
+    byte_copy(atom_.u.as_decimal128, x);
+    atom_.type = PN_DECIMAL128;
+    return *this;
+}
+
+scalar& scalar::operator=(const uuid& x) {
+    byte_copy(atom_.u.as_uuid, x);
+    atom_.type = PN_UUID;
+    return *this;
+}
+
+scalar& scalar::operator=(const std::string& x) { set(binary(x), PN_STRING); return *this; }
+scalar& scalar::operator=(const symbol& x) { set(binary(x), PN_SYMBOL); return *this; }
+scalar& scalar::operator=(const binary& x) { set(x, PN_BINARY); return *this; }
+scalar& scalar::operator=(const char* x) { set(binary(std::string(x)), PN_STRING); return *this; }
 
 void scalar::ok(pn_type_t t) const {
-    if (atom_.type != t) throw type_error(type_id(t), type());
+    if (atom_.type != t) throw make_conversion_error(type_id(t), type());
 }
 
 void scalar::get(bool& x) const { ok(PN_BOOL); x = atom_.u.as_bool; }
@@ -86,17 +138,19 @@ void scalar::get(int32_t& x) const { ok(PN_INT); x = atom_.u.as_int; }
 void scalar::get(wchar_t& x) const { ok(PN_CHAR); x = wchar_t(atom_.u.as_char); }
 void scalar::get(uint64_t& x) const { ok(PN_ULONG); x = atom_.u.as_ulong; }
 void scalar::get(int64_t& x) const { ok(PN_LONG); x = atom_.u.as_long; }
-void scalar::get(amqp_timestamp& x) const { ok(PN_TIMESTAMP); x = atom_.u.as_timestamp; }
+void scalar::get(timestamp& x) const { ok(PN_TIMESTAMP); x = atom_.u.as_timestamp; }
 void scalar::get(float& x) const { ok(PN_FLOAT); x = atom_.u.as_float; }
 void scalar::get(double& x) const { ok(PN_DOUBLE); x = atom_.u.as_double; }
-void scalar::get(amqp_decimal32& x) const { ok(PN_DECIMAL32); x = atom_.u.as_decimal32; }
-void scalar::get(amqp_decimal64& x) const { ok(PN_DECIMAL64); x = atom_.u.as_decimal64; }
-void scalar::get(amqp_decimal128& x) const { ok(PN_DECIMAL128); x = atom_.u.as_decimal128; }
-void scalar::get(amqp_uuid& x) const { ok(PN_UUID); x = atom_.u.as_uuid; }
-void scalar::get(amqp_string& x) const { ok(PN_STRING); x = amqp_string(str_); }
-void scalar::get(amqp_symbol& x) const { ok(PN_SYMBOL); x = amqp_symbol(str_); }
-void scalar::get(amqp_binary& x) const { ok(PN_BINARY); x = amqp_binary(str_); }
-void scalar::get(std::string& x) const { x = get<amqp_string>(); }
+void scalar::get(decimal32& x) const { ok(PN_DECIMAL32); byte_copy(x, atom_.u.as_decimal32); }
+void scalar::get(decimal64& x) const { ok(PN_DECIMAL64); byte_copy(x, atom_.u.as_decimal64); }
+void scalar::get(decimal128& x) const { ok(PN_DECIMAL128); byte_copy(x, atom_.u.as_decimal128); }
+void scalar::get(uuid& x) const { ok(PN_UUID); byte_copy(x, atom_.u.as_uuid); }
+void scalar::get(std::string& x) const {
+    ok(PN_STRING);
+    x = bytes_.str();
+}
+void scalar::get(symbol& x) const { ok(PN_SYMBOL); x = symbol(bytes_.str()); }
+void scalar::get(binary& x) const { ok(PN_BINARY); x = bytes_; }
 
 int64_t scalar::as_int() const {
     if (type_id_is_floating_point(type()))
@@ -113,13 +167,13 @@ int64_t scalar::as_int() const {
       case PN_ULONG: return int64_t(atom_.u.as_ulong);
       case PN_LONG: return atom_.u.as_long;
       case PN_TIMESTAMP: return atom_.u.as_timestamp;
-      default: throw type_error(LONG, type(), "cannot convert");
+      default: throw make_conversion_error(LONG, type());
     }
 }
 
 uint64_t scalar::as_uint() const {
     if  (!type_id_is_integral(type()))
-        throw type_error(ULONG, type(), "cannot convert");
+        throw make_conversion_error(ULONG, type());
     return uint64_t(as_int());
 }
 
@@ -130,14 +184,14 @@ double scalar::as_double() const {
     switch (atom_.type) {
       case PN_DOUBLE: return atom_.u.as_double;
       case PN_FLOAT: return atom_.u.as_float;
-      default: throw type_error(DOUBLE, type(), "cannot convert");
+      default: throw make_conversion_error(DOUBLE, type());
     }
 }
 
 std::string scalar::as_string() const {
     if (type_id_is_string_like(type()))
-        return str_;
-    throw type_error(STRING, type(), "cannot convert");
+        return bytes_.str();
+    throw make_conversion_error(STRING, type());
 }
 
 namespace {
@@ -154,18 +208,18 @@ template <class T, class F> T type_switch(const scalar& a, F f) {
       case CHAR: return f(a.get<wchar_t>());
       case ULONG: return f(a.get<uint64_t>());
       case LONG: return f(a.get<int64_t>());
-      case TIMESTAMP: return f(a.get<amqp_timestamp>());
+      case TIMESTAMP: return f(a.get<timestamp>());
       case FLOAT: return f(a.get<float>());
       case DOUBLE: return f(a.get<double>());
-      case DECIMAL32: return f(a.get<amqp_decimal32>());
-      case DECIMAL64: return f(a.get<amqp_decimal64>());
-      case DECIMAL128: return f(a.get<amqp_decimal128>());
-      case UUID: return f(a.get<amqp_uuid>());
-      case BINARY: return f(a.get<amqp_binary>());
-      case STRING: return f(a.get<amqp_string>());
-      case SYMBOL: return f(a.get<amqp_symbol>());
+      case DECIMAL32: return f(a.get<decimal32>());
+      case DECIMAL64: return f(a.get<decimal64>());
+      case DECIMAL128: return f(a.get<decimal128>());
+      case UUID: return f(a.get<uuid>());
+      case BINARY: return f(a.get<binary>());
+      case STRING: return f(a.get<std::string>());
+      case SYMBOL: return f(a.get<symbol>());
       default:
-        throw error("bad scalar type");
+        throw std::logic_error("bad proton::scalar type");
     }
 }
 

@@ -20,15 +20,15 @@
 #include "proton/connection_engine.hpp"
 #include "proton/error.hpp"
 #include "proton/handler.hpp"
+#include "proton/uuid.hpp"
 
 #include "contexts.hpp"
+#include "id_generator.hpp"
 #include "messaging_adapter.hpp"
-#include "uuid.hpp"
+#include "messaging_event.hpp"
 #include "msg.hpp"
 #include "proton_bits.hpp"
-#include "messaging_event.hpp"
 #include "proton_bits.hpp"
-#include "uuid.hpp"
 
 #include <proton/connection.h>
 #include <proton/transport.h>
@@ -54,27 +54,40 @@ void close_transport(connection_engine_context *ctx_) {
         pn_transport_close_tail(ctx_->transport);
 }
 
-std::string  make_id(const std::string s="") { return s.empty() ? uuid().str() : s; }
+std::string  make_id(const std::string s="") { return s.empty() ? uuid::random().str() : s; }
 }
 
-connection_engine::container::container(const std::string& s) : id_(make_id(s)) {}
+connection_engine::io_error::io_error(const std::string& msg) : error(msg) {}
 
-std::string connection_engine::container::id() const { return id_; }
+class connection_engine::container::impl {
+  public:
+    impl(const std::string s="") : id_(make_id(s)) {}
+
+    const std::string id_;
+    id_generator id_gen_;
+    connection_options options_;
+};
+
+connection_engine::container::container(const std::string& s) : impl_(new impl(s)) {}
+
+connection_engine::container::~container() {}
+
+std::string connection_engine::container::id() const { return impl_->id_; }
 
 connection_options connection_engine::container::make_options() {
-    connection_options opts = options_;
-    opts.container_id(id()).link_prefix(id_gen_.next()+"/");
+    connection_options opts = impl_->options_;
+    opts.container_id(id()).link_prefix(impl_->id_gen_.next()+"/");
     return opts;
 }
 
 void connection_engine::container::options(const connection_options &opts) {
-    options_ = opts;
+    impl_->options_ = opts;
 }
 
 connection_engine::connection_engine(class handler &h, const connection_options& opts) {
-    connection_ = proton::connection(take_ownership(pn_connection()).get());
-    pn_ptr<pn_transport_t> transport = take_ownership(pn_transport());
-    pn_ptr<pn_collector_t> collector = take_ownership(pn_collector());
+    connection_ = proton::connection(internal::take_ownership(pn_connection()).get());
+    internal::pn_ptr<pn_transport_t> transport = internal::take_ownership(pn_transport());
+    internal::pn_ptr<pn_collector_t> collector = internal::take_ownership(pn_collector());
     if (!connection_ || !transport || !collector)
         throw proton::error("engine create");
     int err = pn_transport_bind(transport.get(), connection_.pn_object());
@@ -102,7 +115,7 @@ connection_engine::connection_engine(class handler &h, const connection_options&
 connection_engine::~connection_engine() {
     pn_transport_unbind(ctx_->transport);
     pn_transport_free(ctx_->transport);
-    pn_ptr<pn_connection_t> c(connection_.pn_object());
+    internal::pn_ptr<pn_connection_t> c(connection_.pn_object());
     connection_ = proton::connection();
     pn_connection_free(c.release());
     pn_collector_free(ctx_->collector);
@@ -178,8 +191,6 @@ void connection_engine::try_write() {
             throw io_error(msg() << "write invalid size: " << n << " > " << max);
         }
         pn_transport_pop(ctx_->transport, n);
-    } catch (const closed_error&) {
-        pn_transport_close_head(ctx_->transport);
     } catch (const io_error& e) {
         set_error(ctx_, e.what());
         pn_transport_close_head(ctx_->transport);

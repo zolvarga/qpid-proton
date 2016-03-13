@@ -33,11 +33,16 @@ namespace proton {
 /// A message transfer.  Every delivery exists within the context of a
 /// proton::link.  A delivery attempt can fail. As a result, a
 /// particular message may correspond to multiple deliveries.
-class delivery : public object<pn_delivery_t> {
-  public:
+class delivery : public internal::object<pn_delivery_t> {
     /// @cond INTERNAL
-    delivery(pn_delivery_t* d=0) : object<pn_delivery_t>(d) {}
+    delivery(pn_delivery_t* d) : internal::object<pn_delivery_t>(d) {}
     /// @endcond
+
+  public:
+    delivery() : internal::object<pn_delivery_t>(0) {}
+
+    /// Return the link for this delivery
+    PN_CPP_EXTERN class link link() const;
 
     /// Delivery state values.
     enum state {
@@ -117,6 +122,11 @@ class delivery : public object<pn_delivery_t> {
 
     /// Get the remote state for a delivery.
     PN_CPP_EXTERN state remote_state() const;
+
+    /// @cond INTERNAL
+    friend class proton_event;
+    friend class sender;
+    /// @endcond
 };
 
 }

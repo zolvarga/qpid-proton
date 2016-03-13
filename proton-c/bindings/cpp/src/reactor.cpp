@@ -17,7 +17,8 @@
  * under the License.
  */
 
-#include "proton/reactor.hpp"
+#include "reactor.hpp"
+
 #include "proton/acceptor.hpp"
 #include "proton/connection.hpp"
 #include "proton/task.hpp"
@@ -30,7 +31,7 @@
 namespace proton {
 
 reactor reactor::create() {
-    return take_ownership(pn_reactor()).get();
+    return internal::take_ownership(pn_reactor()).get();
 }
 
 void reactor::run() { pn_reactor_run(pn_object()); }
@@ -40,8 +41,8 @@ void reactor::stop() { pn_reactor_stop(pn_object()); }
 void reactor::wakeup() { pn_reactor_wakeup(pn_object()); }
 bool reactor::quiesced() { return pn_reactor_quiesced(pn_object()); }
 void reactor::yield() { pn_reactor_yield(pn_object()); }
-amqp_timestamp reactor::mark() { return pn_reactor_mark(pn_object()); }
-amqp_timestamp reactor::now() { return pn_reactor_now(pn_object()); }
+timestamp reactor::mark() { return timestamp(pn_reactor_mark(pn_object())); }
+timestamp reactor::now() { return timestamp(pn_reactor_now(pn_object())); }
 
 acceptor reactor::listen(const url& url){
     return pn_reactor_acceptor(pn_object(), url.host().c_str(), url.port().c_str(), 0);
@@ -83,10 +84,10 @@ duration reactor::timeout() {
 }
 
 void reactor::timeout(duration timeout) {
-    if (timeout == duration::FOREVER || timeout.milliseconds > PN_MILLIS_MAX)
+    if (timeout == duration::FOREVER || timeout.ms() > PN_MILLIS_MAX)
         pn_reactor_set_timeout(pn_object(), PN_MILLIS_MAX);
     else
-        pn_reactor_set_timeout(pn_object(), timeout.milliseconds);
+        pn_reactor_set_timeout(pn_object(), timeout.ms());
 }
 
 }
