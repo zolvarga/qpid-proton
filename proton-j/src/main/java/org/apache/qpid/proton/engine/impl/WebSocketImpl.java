@@ -152,7 +152,13 @@ public class WebSocketImpl implements WebSocket
     public String toString()
     {
         StringBuilder builder = new StringBuilder();
-        builder.append("WebSocketImpl [isWebSocketEnabled=").append(_isWebSocketEnabled).append(", state=").append(_state).append(", protocol=").append(_protocol).append(", host=").append(_host).append(", path=").append(_path).append(", port=").append(_port);
+        builder.append(
+                "WebSocketImpl [isWebSocketEnabled=").append(_isWebSocketEnabled)
+                .append(", state=").append(_state)
+                .append(", protocol=").append(_protocol)
+                .append(", host=").append(_host)
+                .append(", path=").append(_path)
+                .append(", port=").append(_port);
 
         if ((_additionalHeaders != null) && (!_additionalHeaders.isEmpty()))
         {
