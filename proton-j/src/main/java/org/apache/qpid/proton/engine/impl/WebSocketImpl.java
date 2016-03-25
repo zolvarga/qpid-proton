@@ -59,6 +59,19 @@ public class WebSocketImpl implements WebSocket
         _isWebSocketEnabled = false;
     }
 
+    public TransportWrapper wrap(final TransportInput input, final TransportOutput output)
+    {
+        return new WebSocketSniffer(new WebSocketTransportWrapper(input, output), new PlainTransportWrapper(output, input))
+        {
+            protected boolean isDeterminationMade()
+            {
+                _selectedTransportWrapper = _wrapper1;
+                return true;
+            }
+        };
+    }
+
+    @Override
     public void configure(String host, String path, int port, String protocol, Map<String, String> additionalHeaders, WebSocketHandler webSocketHandler)
     {
         _host = host;
@@ -77,18 +90,6 @@ public class WebSocketImpl implements WebSocket
         }
 
         _isWebSocketEnabled = true;
-    }
-
-    public TransportWrapper wrap(final TransportInput input, final TransportOutput output)
-    {
-        return new WebSocketSniffer(new WebSocketTransportWrapper(input, output), new PlainTransportWrapper(output, input))
-        {
-            protected boolean isDeterminationMade()
-            {
-                _selectedTransportWrapper = _wrapper1;
-                return true;
-            }
-        };
     }
 
     @Override
