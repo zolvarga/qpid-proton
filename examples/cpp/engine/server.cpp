@@ -22,9 +22,8 @@
 #include "options.hpp"
 
 #include "proton/connection.hpp"
-#include "proton/io.hpp"
+#include "proton/io/socket.hpp"
 #include "proton/url.hpp"
-#include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/url.hpp"
 
@@ -32,6 +31,8 @@
 #include <map>
 #include <string>
 #include <cctype>
+
+#include "../fake_cpp11.hpp"
 
 class server : public proton::handler {
   private:
@@ -43,9 +44,8 @@ class server : public proton::handler {
 
     server(const std::string &u) : url(u) {}
 
-    void on_start(proton::event &e) {
-        e.connection().open();
-        e.connection().open_receiver(url.path());
+    void on_connection_open(proton::connection &c) override {
+        c.open_receiver(url.path());
         std::cout << "server connected to " << url << std::endl;
     }
 
@@ -56,15 +56,15 @@ class server : public proton::handler {
         return uc;
     }
 
-    void on_message(proton::event &e) {
-        std::cout << "Received " << e.message().body() << std::endl;
-        std::string reply_to = e.message().reply_to();
+    void on_message(proton::delivery &d, proton::message &m) override {
+        std::cout << "Received " << m.body() << std::endl;
+        std::string reply_to = m.reply_to();
         proton::message reply;
         reply.address(reply_to);
-        reply.body(to_upper(e.message().body().get<std::string>()));
-        reply.correlation_id(e.message().correlation_id());
+        reply.body(to_upper(proton::get<std::string>(m.body())));
+        reply.correlation_id(m.correlation_id());
         if (!senders[reply_to])
-            senders[reply_to] = e.connection().open_sender(reply_to);
+            senders[reply_to] = d.connection().open_sender(reply_to);
         senders[reply_to].send(reply);
     }
 };
@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
     try {
         opts.parse();
         server handler(address);
-        proton::io::socket_engine(address, handler).run();
+        proton::io::socket::engine(address, handler).run();
         return 0;
     } catch (const bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;

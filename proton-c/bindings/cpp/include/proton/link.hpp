@@ -39,6 +39,7 @@ namespace proton {
 class sender;
 class receiver;
 class condition;
+class link_context;
 
 /// A named channel for sending or receiving messages.  It is the base
 /// class for sender and receiver.
@@ -118,18 +119,23 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     /// Get the link name.
     PN_CPP_EXTERN std::string name() const;
 
+    /// Return the container for this link
+    PN_CPP_EXTERN class container &container() const;
+
     /// Connection that owns this link.
     PN_CPP_EXTERN class connection connection() const;
 
     /// Session that owns this link.
     PN_CPP_EXTERN class session session() const;
 
+    ///@cond INTERNAL
     /// XXX local versus remote, mutability
     /// XXX - local_sender_settle_mode and local_receiver_settle_mode
     PN_CPP_EXTERN link_options::sender_settle_mode sender_settle_mode();
     PN_CPP_EXTERN link_options::receiver_settle_mode receiver_settle_mode();
     PN_CPP_EXTERN link_options::sender_settle_mode remote_sender_settle_mode();
     PN_CPP_EXTERN link_options::receiver_settle_mode remote_receiver_settle_mode();
+    ///@endcond
 
   private:
     // Used by link_options
@@ -140,6 +146,7 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     // Used by message to decode message from a delivery
     ssize_t recv(char* buffer, size_t size);
     bool advance();
+    link_context &context();
 
   friend class connection;
   friend class delivery;
@@ -149,13 +156,17 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
   friend class proton_event;
   friend class link_iterator;
   friend class link_options;
+  friend class messaging_adapter;
 };
 
 /// An iterator for links.
 class link_iterator : public internal::iter_base<link, link_iterator> {
   public:
+    ///@cond INTERNAL
     explicit link_iterator(link l = 0, pn_session_t* s = 0) :
         internal::iter_base<link, link_iterator>(l), session_(s) {}
+    ///@endcond
+    /// Advance
     PN_CPP_EXTERN link_iterator operator++();
 
   private:

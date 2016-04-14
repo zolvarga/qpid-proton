@@ -21,9 +21,8 @@
 
 #include "options.hpp"
 
-#include "proton/io.hpp"
+#include "proton/io/socket.hpp"
 #include "proton/url.hpp"
-#include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/link.hpp"
 #include "proton/value.hpp"
@@ -32,7 +31,7 @@
 #include <iostream>
 #include <map>
 
-
+#include "../fake_cpp11.hpp"
 
 class simple_recv : public proton::handler {
   private:
@@ -44,22 +43,20 @@ class simple_recv : public proton::handler {
 
     simple_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
-    void on_start(proton::event &e) {
-        e.connection().open();
-        receiver = e.connection().open_receiver(url.path());
+    void on_connection_open(proton::connection &c) override {
+        receiver = c.open_receiver(url.path());
         std::cout << "simple_recv listening on " << url << std::endl;
     }
 
-    void on_message(proton::event &e) {
-        proton::message& msg = e.message();
+    void on_message(proton::delivery& d, proton::message &msg) override {
         if (msg.id().get<uint64_t>() < received)
             return; // ignore duplicate
         if (expected == 0 || received < expected) {
             std::cout << msg.body() << std::endl;
             received++;
             if (received == expected) {
-                e.receiver().close();
-                e.connection().close();
+                d.link().close();
+                d.connection().close();
             }
         }
     }
@@ -76,7 +73,7 @@ int main(int argc, char **argv) {
     try {
         opts.parse();
         simple_recv handler(address, message_count);
-        proton::io::socket_engine(address, handler).run();
+        proton::io::socket::engine(address, handler).run();
         return 0;
     } catch (const bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;

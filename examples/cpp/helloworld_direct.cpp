@@ -20,11 +20,15 @@
  */
 
 #include "proton/acceptor.hpp"
+#include "proton/connection.hpp"
 #include "proton/container.hpp"
-#include "proton/event.hpp"
+#include "proton/delivery.hpp"
 #include "proton/handler.hpp"
+#include "proton/sender.hpp"
 
 #include <iostream>
+
+#include "fake_cpp11.hpp"
 
 class hello_world_direct : public proton::handler {
   private:
@@ -34,26 +38,26 @@ class hello_world_direct : public proton::handler {
   public:
     hello_world_direct(const proton::url& u) : url(u) {}
 
-    void on_start(proton::event &e) {
-        acceptor = e.container().listen(url);
-        e.container().open_sender(url);
+    void on_container_start(proton::container &c) override {
+        acceptor = c.listen(url);
+        c.open_sender(url);
     }
 
-    void on_sendable(proton::event &e) {
+    void on_sendable(proton::sender &s) override {
         proton::message m("Hello World!");
-        e.sender().send(m);
-        e.sender().close();
+        s.send(m);
+        s.close();
     }
 
-    void on_message(proton::event &e) {
-        std::cout << e.message().body() << std::endl;
+    void on_message(proton::delivery &d, proton::message &m) override {
+        std::cout << m.body() << std::endl;
     }
 
-    void on_delivery_accept(proton::event &e) {
-        e.connection().close();
+    void on_delivery_accept(proton::delivery &d) override {
+        d.connection().close();
     }
 
-    void on_connection_close(proton::event &e) {
+    void on_connection_close(proton::connection &) override {
         acceptor.close();
     }
 };

@@ -29,8 +29,21 @@
 namespace proton {
 
 class condition;
+class container;
 class event;
+class transport;
+class connection;
+class session;
+class link;
+class sender;
+class receiver;
+class delivery;
+class message;
 class messaging_adapter;
+
+namespace io {
+class connection_engine;
+}
 
 /// Callback functions for handling proton events.
 ///
@@ -41,28 +54,7 @@ class
 PN_CPP_CLASS_EXTERN handler
 {
   public:
-    /// @cond INTERNAL
-    /// XXX move configuration to connection or container
-
-    /// Create a handler.
-    ///
-    /// @param prefetch set flow control to automatically pre-fetch
-    /// this many messages
-    ///
-    /// @param auto_accept automatically accept received messages
-    /// after on_message()
-    ///
-    /// @param auto_settle automatically settle on receipt of delivery
-    /// for sent messages
-    ///
-    /// @param peer_close_is_error treat orderly remote connection
-    /// close as error
-    PN_CPP_EXTERN handler(int prefetch=10, bool auto_accept=true,
-                          bool auto_settle=true,
-                          bool peer_close_is_error=false);
-
-    /// @endcond
-
+    PN_CPP_EXTERN handler();
     PN_CPP_EXTERN virtual ~handler();
 
     /// @name Event callbacks
@@ -72,11 +64,11 @@ PN_CPP_CLASS_EXTERN handler
     /// @{
 
     /// The event loop is starting.
-    PN_CPP_EXTERN virtual void on_start(event &e);
+    PN_CPP_EXTERN virtual void on_container_start(container &c);
     /// A message is received.
-    PN_CPP_EXTERN virtual void on_message(event &e);
+    PN_CPP_EXTERN virtual void on_message(delivery &d, message &m);
     /// A message can be sent.
-    PN_CPP_EXTERN virtual void on_sendable(event &e);
+    PN_CPP_EXTERN virtual void on_sendable(sender &s);
 
     /// transport_open is not present because currently there is no specific
     /// low level event to hang it from - you should put any initialisation code
@@ -86,10 +78,10 @@ PN_CPP_CLASS_EXTERN handler
     /// XXX symmetry of the API.
 
     /// The underlying network transport has closed.
-    PN_CPP_EXTERN virtual void on_transport_close(event &e);
+    PN_CPP_EXTERN virtual void on_transport_close(transport &t);
     /// The underlying network transport has closed with an error
     /// condition.
-    PN_CPP_EXTERN virtual void on_transport_error(event &e);
+    PN_CPP_EXTERN virtual void on_transport_error(transport &t);
 
     /// Note that every ..._open event is paired with a ..._close event which can clean
     /// up any resources created by the ..._open handler.
@@ -99,34 +91,41 @@ PN_CPP_CLASS_EXTERN handler
     /// be along in a minute to handle the clean up.
 
     /// The remote peer opened the connection.
-    PN_CPP_EXTERN virtual void on_connection_open(event &e);
+    PN_CPP_EXTERN virtual void on_connection_open(connection &c);
     /// The remote peer closed the connection.
-    PN_CPP_EXTERN virtual void on_connection_close(event &e);
+    PN_CPP_EXTERN virtual void on_connection_close(connection &c);
     /// The remote peer closed the connection with an error condition.
-    PN_CPP_EXTERN virtual void on_connection_error(event &e);
+    PN_CPP_EXTERN virtual void on_connection_error(connection &c);
 
     /// The remote peer opened the session.
-    PN_CPP_EXTERN virtual void on_session_open(event &e);
+    PN_CPP_EXTERN virtual void on_session_open(session &s);
     /// The remote peer closed the session.
-    PN_CPP_EXTERN virtual void on_session_close(event &e);
+    PN_CPP_EXTERN virtual void on_session_close(session &s);
     /// The remote peer closed the session with an error condition.
-    PN_CPP_EXTERN virtual void on_session_error(event &e);
+    PN_CPP_EXTERN virtual void on_session_error(session &s);
 
     /// The remote peer opened the link.
-    PN_CPP_EXTERN virtual void on_link_open(event &e);
+    PN_CPP_EXTERN virtual void on_receiver_open(receiver& l);
     /// The remote peer closed the link.
-    PN_CPP_EXTERN virtual void on_link_close(event &e);
+    PN_CPP_EXTERN virtual void on_receiver_close(receiver& l);
     /// The remote peer closed the link with an error condition.
-    PN_CPP_EXTERN virtual void on_link_error(event &e);
+    PN_CPP_EXTERN virtual void on_receiver_error(receiver& l);
+
+    /// The remote peer opened the link.
+    PN_CPP_EXTERN virtual void on_sender_open(sender& l);
+    /// The remote peer closed the link.
+    PN_CPP_EXTERN virtual void on_sender_close(sender& l);
+    /// The remote peer closed the link with an error condition.
+    PN_CPP_EXTERN virtual void on_sender_error(sender& l);
 
     /// The remote peer accepted an outgoing message.
-    PN_CPP_EXTERN virtual void on_delivery_accept(event &e);
+    PN_CPP_EXTERN virtual void on_delivery_accept(delivery &d);
     /// The remote peer rejected an outgoing message.
-    PN_CPP_EXTERN virtual void on_delivery_reject(event &e);
+    PN_CPP_EXTERN virtual void on_delivery_reject(delivery &d);
     /// The remote peer released an outgoing message.
-    PN_CPP_EXTERN virtual void on_delivery_release(event &e);
+    PN_CPP_EXTERN virtual void on_delivery_release(delivery &d);
     /// The remote peer settled an outgoing message.
-    PN_CPP_EXTERN virtual void on_delivery_settle(event &e);
+    PN_CPP_EXTERN virtual void on_delivery_settle(delivery &d);
 
     // XXX are we missing on_delivery_modify?
     // XXX on_delivery_accept (and co) is a more discriminated on_delivery_settle
@@ -137,13 +136,11 @@ PN_CPP_CLASS_EXTERN handler
     /// XXX settle API questions around task
     /// XXX register functions instead of having these funny generic events
     /// A timer fired.
-    PN_CPP_EXTERN virtual void on_timer(event &e);
+    PN_CPP_EXTERN virtual void on_timer(container &c);
     /// @endcond
 
-    /// Fallback event handling.
-    PN_CPP_EXTERN virtual void on_unhandled(event &e);
     /// Fallback error handling.
-    PN_CPP_EXTERN virtual void on_unhandled_error(event &e, const condition &c);
+    PN_CPP_EXTERN virtual void on_unhandled_error(const condition &c);
 
     /// @}
 
@@ -152,7 +149,7 @@ PN_CPP_CLASS_EXTERN handler
     internal::pn_unique_ptr<messaging_adapter> messaging_adapter_;
 
     friend class container;
-    friend class connection_engine;
+    friend class io::connection_engine;
     friend class connection_options;
     friend class link_options;
     /// @endcond

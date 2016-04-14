@@ -40,6 +40,10 @@ namespace proton {
 class proton_handler;
 class connection;
 
+namespace io {
+class connection_engine;
+}
+
 /// Options for creating a connection.
 ///
 /// Options can be "chained" like this:
@@ -75,9 +79,6 @@ class connection_options {
     PN_CPP_EXTERN connection_options& operator=(const connection_options&);
 
     // XXX add C++11 move operations
-
-    /// Override with options from other.
-    PN_CPP_EXTERN void override(const connection_options& other);
 
     /// Set a handler for the connection.
     PN_CPP_EXTERN connection_options& handler(class handler *);
@@ -145,13 +146,14 @@ class connection_options {
     static pn_connection_t *pn_connection(connection &);
     class ssl_client_options &ssl_client_options();
     class ssl_server_options &ssl_server_options();
+    PN_CPP_EXTERN void update(const connection_options& other);
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;
 
     friend class container_impl;
     friend class connector;
-    friend class connection_engine;
+    friend class io::connection_engine;
     /// @endcond
 };
 

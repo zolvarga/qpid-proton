@@ -19,12 +19,13 @@
  *
  */
 
-#include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/url.hpp"
-#include "proton/io.hpp"
+#include "proton/io/socket.hpp"
 
 #include <iostream>
+
+#include "../fake_cpp11.hpp"
 
 class hello_world : public proton::handler {
   private:
@@ -33,21 +34,20 @@ class hello_world : public proton::handler {
   public:
     hello_world(const std::string& address) : address_(address) {}
 
-    void on_start(proton::event &e) {
-        e.connection().open();
-        e.connection().open_receiver(address_);
-        e.connection().open_sender(address_);
+    void on_connection_open(proton::connection &c) override {
+        c.open_receiver(address_);
+        c.open_sender(address_);
     }
 
-    void on_sendable(proton::event &e) {
+    void on_sendable(proton::sender &s) override {
         proton::message m("Hello World!");
-        e.sender().send(m);
-        e.sender().close();
+        s.send(m);
+        s.close();
     }
 
-    void on_message(proton::event &e) {
-        std::cout << e.message().body() << std::endl;
-        e.connection().close();
+    void on_message(proton::delivery &d, proton::message &m) override {
+        std::cout << m.body() << std::endl;
+        d.connection().close();
     }
 };
 
@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
     try {
         proton::url url(argc > 1 ? argv[1] : "127.0.0.1:5672/examples");
         hello_world hw(url.path());
-        proton::io::socket_engine(url, hw).run();
+        proton::io::socket::engine(url, hw).run();
 
         return 0;
     } catch (const std::exception& e) {

@@ -53,9 +53,6 @@ public class WebSocketTools
         int max = 10;
         if ((buffer.limit() > 0) && (buffer.limit() < buffer.capacity()))
         {
-            System.out.println(title + " : ");
-            //            printWriter.println(title + " : ");
-
             int size = buffer.limit();
             int pos = buffer.position();
             byte[] bytes = new byte[size - pos];
@@ -66,15 +63,15 @@ public class WebSocketTools
             //                max = buffer.limit();
             //            }
             //            printWriter.println(WebSocketHandlerImpl.bytesToHex(bytes, max));
-            System.out.println("size=" + bytes.length);
-            //            printWriter.println("size=" + bytes.length);
+            System.out.println(title + " : " + "size=" + bytes.length);
+//            printWriter.println(title + " : " + "size=" + bytes.length);
 
-            for (int i = 0; i < bytes.length; i++)
-            {
-                System.out.print((char) bytes[i]);
-                //                printWriter.write((char) bytes[i]);
-            }
-            System.out.println();
+//            for (int i = 0; i < bytes.length; i++)
+//            {
+//                System.out.print((char) bytes[i]);
+//                //                printWriter.write((char) bytes[i]);
+//            }
+//            System.out.println();
             //            printWriter.println();
             System.out.println("***************************************************");
             //            printWriter.println("***************************************************");

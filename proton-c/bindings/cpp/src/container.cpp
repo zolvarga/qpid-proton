@@ -34,7 +34,6 @@
 #include "connector.hpp"
 #include "contexts.hpp"
 #include "messaging_adapter.hpp"
-#include "messaging_event.hpp"
 
 #include "proton/connection.h"
 #include "proton/session.h"
@@ -80,5 +79,7 @@ task container::schedule(int delay, handler *h) { return impl_->schedule(delay, 
 void container::client_connection_options(const connection_options &o) { impl_->client_connection_options(o); }
 
 void container::server_connection_options(const connection_options &o) { impl_->server_connection_options(o); }
+
+void container::link_options(const class link_options &o) { impl_->link_options(o); }
 
 } // namespace proton

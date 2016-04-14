@@ -26,9 +26,9 @@
 #include "proton/handler.hpp"
 #include "proton/connection.hpp"
 #include "proton/decoder.hpp"
-#include "proton/event.hpp"
 #include "proton/reactor.h"
 #include "proton/value.hpp"
+#include "proton/link_options.hpp"
 
 #include <iostream>
 #include <map>
@@ -36,6 +36,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#if __cplusplus < 201103L
+#define override
+#endif
 
 class reactor_send : public proton::handler {
   private:
@@ -53,8 +56,7 @@ class reactor_send : public proton::handler {
   public:
 
     reactor_send(const std::string &url, int c, int size, bool replying)
-        : handler(1024), // prefetch=1024
-          url_(url), sent_(0), confirmed_(0), total_(c),
+        : url_(url), sent_(0), confirmed_(0), total_(c),
           received_(0), received_bytes_(0), replying_(replying) {
         if (replying_)
             message_.reply_to("localhost/test");
@@ -63,13 +65,12 @@ class reactor_send : public proton::handler {
         message_.body(content);
     }
 
-    void on_start(proton::event &e) {
-        e.container().open_sender(url_);
+    void on_container_start(proton::container &c) override {
+        c.link_options(proton::link_options().credit_window(1024));
+        c.open_sender(url_);
     }
 
-    void on_sendable(proton::event &e) {
-        proton::sender sender = e.sender();
-
+    void on_sendable(proton::sender &sender) override {
         while (sender.credit() && sent_ < total_) {
             id_value_ = sent_ + 1;
             message_.correlation_id(id_value_);
@@ -79,31 +80,30 @@ class reactor_send : public proton::handler {
         }
     }
 
-    void on_accepted(proton::event &e) {
+    void on_delivery_accept(proton::delivery &d) override {
         confirmed_++;
-        e.delivery().settle();
+        d.settle();
         if (confirmed_ == total_) {
             std::cout << "all messages confirmed" << std::endl;
             if (!replying_)
-                e.connection().close();
+                d.connection().close();
         }
     }
 
-    void on_message(proton::event &e) {
-        proton::message &msg = e.message();
-        received_content_ = msg.body().get<proton::binary>();
+    void on_message(proton::delivery &d, proton::message &msg) override {
+        received_content_ = proton::get<proton::binary>(msg.body());
         received_bytes_ += received_content_.size();
         if (received_ < total_) {
             received_++;
         }
-        e.delivery().settle();
+        d.settle();
         if (received_ == total_) {
-            e.receiver().close();
-            e.connection().close();
+            d.link().close();
+            d.connection().close();
         }
     }
 
-    void on_disconnected(proton::event &e) {
+    void on_transport_close(proton::transport &) override {
         sent_ = confirmed_;
     }
 };

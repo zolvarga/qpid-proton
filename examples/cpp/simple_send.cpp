@@ -21,14 +21,15 @@
 
 #include "options.hpp"
 
-#include "proton/container.hpp"
-#include "proton/event.hpp"
-#include "proton/handler.hpp"
 #include "proton/connection.hpp"
+#include "proton/container.hpp"
+#include "proton/handler.hpp"
 #include "proton/value.hpp"
 
 #include <iostream>
 #include <map>
+
+#include "fake_cpp11.hpp"
 
 class simple_send : public proton::handler {
   private:
@@ -41,18 +42,16 @@ class simple_send : public proton::handler {
   public:
     simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
 
-    void on_start(proton::event &e) {
-        sender = e.container().open_sender(url);
+    void on_container_start(proton::container &c) override {
+        sender = c.open_sender(url);
     }
 
-    void on_sendable(proton::event &e) {
-        proton::sender sender = e.sender();
-        
+    void on_sendable(proton::sender &sender) override {
         while (sender.credit() && sent < total) {
             proton::message msg;
             std::map<std::string, int> m;
             m["sequence"] = sent + 1;
-            
+
             msg.id(sent + 1);
             msg.body(m);
 
@@ -61,16 +60,16 @@ class simple_send : public proton::handler {
         }
     }
 
-    void on_delivery_accept(proton::event &e) {
+    void on_delivery_accept(proton::delivery &d) override {
         confirmed++;
-        
+
         if (confirmed == total) {
             std::cout << "all messages confirmed" << std::endl;
-            e.connection().close();
+            d.connection().close();
         }
     }
 
-    void on_transport_close(proton::event &e) {
+    void on_transport_close(proton::transport &) override {
         sent = confirmed;
     }
 };

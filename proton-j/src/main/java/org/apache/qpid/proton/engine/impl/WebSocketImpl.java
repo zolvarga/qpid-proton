@@ -22,6 +22,7 @@ package org.apache.qpid.proton.engine.impl;
 
 import org.apache.qpid.proton.engine.*;
 
+import static org.apache.qpid.proton.engine.WebSocket.WebSocketState.*;
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.*;
 
 import java.nio.ByteBuffer;
@@ -41,7 +42,7 @@ public class WebSocketImpl implements WebSocket
     private int _webSocketHeaderSize = 0;
 
     private WebSocketHandler _webSocketHandler;
-    private WebSocketState _state = WebSocketState.PN_WS_NOT_STARTED;
+    private WebSocketState _state = PN_WS_NOT_STARTED;
 
     private String _host = "";
     private String _path = "";
@@ -270,11 +271,11 @@ public class WebSocketImpl implements WebSocket
                                 break;
                             case WEB_SOCKET_MESSAGE_TYPE_CLOSE:
                                 _pingBuffer.put(_inputBuffer);
-                                _state = WebSocketState.PN_WS_CONNECTED_CLOSING;
+                                _state = PN_WS_CONNECTED_CLOSING;
                                 break;
                             case WEB_SOCKET_MESSAGE_TYPE_PING:
                                 _pingBuffer.put(_inputBuffer);
-                                _state = WebSocketState.PN_WS_CONNECTED_PONG;
+                                _state = PN_WS_CONNECTED_PONG;
                                 break;
                         }
                     }
@@ -450,7 +451,7 @@ public class WebSocketImpl implements WebSocket
                             return _outputBuffer.position();
                         }
                     case PN_WS_CONNECTED_CLOSING:
-                        _state = WebSocketState.PN_WS_CLOSED;
+                        _state = PN_WS_CLOSED;
 
                         writeClose();
 
@@ -536,7 +537,7 @@ public class WebSocketImpl implements WebSocket
                     case PN_WS_CONNECTED_FLOW:
                     case PN_WS_CONNECTED_PONG:
                     case PN_WS_CONNECTED_CLOSING:
-                        if (_outputBuffer.position() != 0)
+                        if ((bytes >= _webSocketHeaderSize) && (_outputBuffer.position() != 0))
                         {
                             _outputBuffer.flip();
                             _outputBuffer.position(bytes);
@@ -544,6 +545,10 @@ public class WebSocketImpl implements WebSocket
                             _head.position(0);
                             _head.limit(_outputBuffer.position());
                             _underlyingOutput.pop(bytes - _webSocketHeaderSize);
+                        }
+                        else if ((bytes > 0) && (bytes < _webSocketHeaderSize))
+                        {
+                            _webSocketHeaderSize -= bytes;
                         }
                         else
                         {

@@ -23,8 +23,8 @@
 
 #include "proton/acceptor.hpp"
 #include "proton/container.hpp"
-#include "proton/event.hpp"
 #include "proton/handler.hpp"
+#include "proton/sender.hpp"
 #include "proton/url.hpp"
 
 #include <iostream>
@@ -32,6 +32,8 @@
 #include <string>
 #include <sstream>
 #include <cctype>
+
+#include "fake_cpp11.hpp"
 
 class server : public proton::handler {
   private:
@@ -43,8 +45,8 @@ class server : public proton::handler {
   public:
     server(const std::string &u) : url(u), address_counter(0) {}
 
-    void on_start(proton::event &e) {
-        e.container().listen(url);
+    void on_container_start(proton::container &c) override {
+        c.listen(url);
         std::cout << "server listening on " << url << std::endl;
     }
 
@@ -64,30 +66,28 @@ class server : public proton::handler {
         return addr.str();
     }
 
-    void on_link_open(proton::event& e) {
-        proton::link link = e.link();
-        
-        if (!!link.sender() && link.remote_source().dynamic()) {
-            link.local_source().address(generate_address());
-            senders[link.local_source().address()] = link.sender();
+    void on_sender_open(proton::sender &sender) override {
+        if (sender.remote_source().dynamic()) {
+            sender.local_source().address(generate_address());
+            senders[sender.local_source().address()] = sender;
         }
     }
 
-    void on_message(proton::event &e) {
-        std::cout << "Received " << e.message().body() << std::endl;
-        
-        std::string reply_to = e.message().reply_to();
+    void on_message(proton::delivery &d, proton::message &m) override {
+        std::cout << "Received " << m.body() << std::endl;
+
+        std::string reply_to = m.reply_to();
         sender_map::iterator it = senders.find(reply_to);
-        
+
         if (it == senders.end()) {
             std::cout << "No link for reply_to: " << reply_to << std::endl;
         } else {
             proton::sender sender = it->second;
             proton::message reply;
-            
+
             reply.address(reply_to);
-            reply.body(to_upper(e.message().body().get<std::string>()));
-            reply.correlation_id(e.message().correlation_id());
+            reply.body(to_upper(proton::get<std::string>(m.body())));
+            reply.correlation_id(m.correlation_id());
 
             sender.send(reply);
         }
@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
 
     try {
         opts.parse();
-        
+
         server srv(address);
         proton::container(srv).run();
 

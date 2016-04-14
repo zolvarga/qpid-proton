@@ -23,7 +23,6 @@
 
 #include "proton/connection.hpp"
 #include "proton/container.hpp"
-#include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/url.hpp"
 
@@ -31,6 +30,8 @@
 #include <map>
 #include <string>
 #include <cctype>
+
+#include "fake_cpp11.hpp"
 
 class server : public proton::handler {
   private:
@@ -42,8 +43,8 @@ class server : public proton::handler {
   public:
     server(const std::string &u) : url(u) {}
 
-    void on_start(proton::event &e) {
-        connection = e.container().connect(url);
+    void on_container_start(proton::container &c) override {
+        connection = c.connect(url);
         connection.open_receiver(url.path());
 
         std::cout << "server connected to " << url << std::endl;
@@ -58,15 +59,15 @@ class server : public proton::handler {
         return uc;
     }
 
-    void on_message(proton::event &e) {
-        std::cout << "Received " << e.message().body() << std::endl;
+    void on_message(proton::delivery &d, proton::message &m) override {
+        std::cout << "Received " << m.body() << std::endl;
 
-        std::string reply_to = e.message().reply_to();
+        std::string reply_to = m.reply_to();
         proton::message reply;
 
         reply.address(reply_to);
-        reply.body(to_upper(e.message().body().get<std::string>()));
-        reply.correlation_id(e.message().correlation_id());
+        reply.body(to_upper(proton::get<std::string>(m.body())));
+        reply.correlation_id(m.correlation_id());
 
         if (!senders[reply_to]) {
             senders[reply_to] = connection.open_sender(reply_to);

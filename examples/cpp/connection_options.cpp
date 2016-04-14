@@ -19,9 +19,9 @@
  *
  */
 
+#include "proton/connection.hpp"
 #include "proton/container.hpp"
 #include "proton/handler.hpp"
-#include "proton/event.hpp"
 #include "proton/url.hpp"
 #include "proton/transport.hpp"
 
@@ -29,12 +29,14 @@
 
 using proton::connection_options;
 
+#include "fake_cpp11.hpp"
+
 class handler_2 : public proton::handler {
-    void on_connection_open(proton::event &e) {
+    void on_connection_open(proton::connection &c) override {
         std::cout << "connection events going to handler_2" << std::endl;
-        std::cout << "connection max_frame_size: " << e.connection().transport().max_frame_size() <<
-            ", idle timeout: " << e.connection().transport().idle_timeout() << std::endl;
-        e.connection().close();
+        std::cout << "connection max_frame_size: " << c.transport().max_frame_size() <<
+            ", idle timeout: " << c.transport().idle_timeout() << std::endl;
+        c.close();
     }
 };
 
@@ -46,15 +48,15 @@ class main_handler : public proton::handler {
   public:
     main_handler(const proton::url& u) : url(u) {}
 
-    void on_start(proton::event &e) {
+    void on_container_start(proton::container &c) override {
         // Connection options for this connection.  Merged with and overriding the container's
         // client_connection_options() settings.
-        e.container().connect(url, connection_options().handler(&conn_handler).max_frame_size(2468));
+        c.connect(url, connection_options().handler(&conn_handler).max_frame_size(2468));
     }
 
-    void on_connection_open(proton::event &e) {
+    void on_connection_open(proton::connection &c) override {
         std::cout << "unexpected connection event on main handler" << std::endl;
-        e.connection().close();
+        c.close();
     }
 };
 

@@ -21,9 +21,8 @@
 
 #include "options.hpp"
 
-#include "proton/io.hpp"
+#include "proton/io/socket.hpp"
 #include "proton/url.hpp"
-#include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/connection.hpp"
 #include "proton/value.hpp"
@@ -31,10 +30,11 @@
 #include <iostream>
 #include <map>
 
+#include "../fake_cpp11.hpp"
+
 class simple_send : public proton::handler {
   private:
     proton::url url;
-    proton::sender sender;
     int sent;
     int confirmed;
     int total;
@@ -42,13 +42,11 @@ class simple_send : public proton::handler {
 
     simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
 
-    void on_start(proton::event &e) {
-        e.connection().open();
-        sender = e.connection().open_sender(url.path());
+    void on_connection_open(proton::connection &c) override {
+        c.open_sender(url.path());
     }
 
-    void on_sendable(proton::event &e) {
-        proton::sender sender = e.sender();
+    void on_sendable(proton::sender &sender) override {
         while (sender.credit() && sent < total) {
             proton::message msg;
             msg.id(sent + 1);
@@ -60,15 +58,15 @@ class simple_send : public proton::handler {
         }
     }
 
-    void on_delivery_accept(proton::event &e) {
+    void on_delivery_accept(proton::delivery &d) override {
         confirmed++;
         if (confirmed == total) {
             std::cout << "all messages confirmed" << std::endl;
-            e.connection().close();
+            d.connection().close();
         }
     }
 
-    void on_transport_close(proton::event &e) {
+    void on_transport_close(proton::transport &) override {
         sent = confirmed;
     }
 };
@@ -83,7 +81,7 @@ int main(int argc, char **argv) {
     try {
         opts.parse();
         simple_send handler(address, message_count);
-        proton::io::socket_engine(address, handler).run();
+        proton::io::socket::engine(address, handler).run();
         return 0;
     } catch (const bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;

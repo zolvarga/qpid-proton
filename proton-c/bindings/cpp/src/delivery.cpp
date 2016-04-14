@@ -20,13 +20,22 @@
  */
 
 #include "proton/delivery.hpp"
-#include <proton/link.hpp>
+
+#include "proton/connection.hpp"
+#include "proton/link.hpp"
+#include "proton/session.hpp"
 
 #include "proton/delivery.h"
+#include "proton/link.h"
+#include "proton/session.h"
 
 namespace proton {
 
 link delivery::link() const { return pn_delivery_link(pn_object()); }
+session delivery::session() const { return pn_link_session(pn_delivery_link(pn_object())); }
+connection delivery::connection() const { return pn_session_connection(pn_link_session(pn_delivery_link(pn_object()))); }
+container& delivery::container() const { return connection().container(); }
+
 bool delivery::settled() const { return pn_delivery_settled(pn_object()); }
 
 void delivery::settle() { pn_delivery_settle(pn_object()); }

@@ -20,14 +20,15 @@
  */
 
 #include "options.hpp"
-#include "proton/io.hpp"
+#include "proton/io/socket.hpp"
 #include "proton/url.hpp"
-#include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/connection.hpp"
 
 #include <iostream>
 #include <vector>
+
+#include "../fake_cpp11.hpp"
 
 class client : public proton::handler {
   private:
@@ -39,10 +40,9 @@ class client : public proton::handler {
   public:
     client(const proton::url &u, const std::vector<std::string>& r) : url(u), requests(r) {}
 
-    void on_start(proton::event &e) {
-        e.connection().open();
-        sender = e.connection().open_sender(url.path());
-        receiver = e.connection().open_receiver("", proton::link_options().dynamic_address(true));
+    void on_connection_open(proton::connection &c) override {
+        sender = c.open_sender(url.path());
+        receiver = c.open_receiver("", proton::link_options().dynamic_address(true));
     }
 
     void send_request() {
@@ -52,20 +52,18 @@ class client : public proton::handler {
         sender.send(req);
     }
 
-    void on_link_open(proton::event &e) {
-        if (e.link() == receiver)
-            send_request();
+    void on_receiver_open(proton::receiver &) override {
+        send_request();
     }
 
-    void on_message(proton::event &e) {
+    void on_message(proton::delivery &d, proton::message &response) override {
         if (requests.empty()) return; // Spurious extra message!
-        proton::message& response = e.message();
         std::cout << requests.front() << " => " << response.body() << std::endl;
         requests.erase(requests.begin());
         if (!requests.empty()) {
             send_request();
         } else {
-            e.connection().close();
+            d.connection().close();
         }
     }
 };
@@ -85,7 +83,7 @@ int main(int argc, char **argv) {
         requests.push_back("All mimsy were the borogroves,");
         requests.push_back("And the mome raths outgrabe.");
         client handler(address, requests);
-        proton::io::socket_engine(address, handler).run();
+        proton::io::socket::engine(address, handler).run();
         return 0;
     } catch (const bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;

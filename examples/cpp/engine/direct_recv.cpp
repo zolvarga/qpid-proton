@@ -21,8 +21,7 @@
 
 #include "options.hpp"
 
-#include "proton/io.hpp"
-#include "proton/event.hpp"
+#include "proton/io/socket.hpp"
 #include "proton/handler.hpp"
 #include "proton/link.hpp"
 #include "proton/url.hpp"
@@ -30,6 +29,8 @@
 
 #include <iostream>
 #include <map>
+
+#include "../fake_cpp11.hpp"
 
 class direct_recv : public proton::handler {
   private:
@@ -39,12 +40,7 @@ class direct_recv : public proton::handler {
   public:
     direct_recv(int c) : expected(c), received(0) {}
 
-    void on_start(proton::event &e) {
-        e.connection().open();
-    }
-
-    void on_message(proton::event &e) {
-        proton::message& msg = e.message();
+    void on_message(proton::delivery &d, proton::message &msg) override {
         if (msg.id().get<uint64_t>() < received)
             return; // ignore duplicate
         if (expected == 0 || received < expected) {
@@ -52,8 +48,8 @@ class direct_recv : public proton::handler {
             received++;
         }
         if (received == expected) {
-            e.receiver().close();
-            e.connection().close();
+            d.link().close();
+            d.connection().close();
         }
     }
 };
@@ -68,10 +64,10 @@ int main(int argc, char **argv) {
     try {
         opts.parse();
         proton::url url(address);
-        proton::io::listener listener(url.host(), url.port());
+        proton::io::socket::listener listener(url.host(), url.port());
         std::cout << "direct_recv listening on " << url << std::endl;
         direct_recv handler(message_count);
-        proton::io::socket_engine(listener.accept(), handler).run();
+        proton::io::socket::engine(listener.accept(), handler).run();
         return 0;
     } catch (const bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;

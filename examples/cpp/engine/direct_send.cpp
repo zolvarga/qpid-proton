@@ -23,14 +23,15 @@
 
 #include "proton/acceptor.hpp"
 #include "proton/connection.hpp"
-#include "proton/io.hpp"
+#include "proton/io/socket.hpp"
 #include "proton/url.hpp"
-#include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/value.hpp"
 
 #include <iostream>
 #include <map>
+
+#include "../fake_cpp11.hpp"
 
 class simple_send : public proton::handler {
   private:
@@ -40,12 +41,7 @@ class simple_send : public proton::handler {
   public:
     simple_send(int c) : sent(0), confirmed(0), total(c) {}
 
-    void on_start(proton::event &e) {
-        e.connection().open();
-    }
-
-    void on_sendable(proton::event &e) {
-        proton::sender sender = e.sender();
+    void on_sendable(proton::sender &sender) override {
         while (sender.credit() && sent < total) {
             proton::message msg;
             msg.id(sent + 1);
@@ -57,15 +53,15 @@ class simple_send : public proton::handler {
         }
     }
 
-    void on_delivery_accept(proton::event &e) {
+    void on_delivery_accept(proton::delivery &d) override {
         confirmed++;
         if (confirmed == total) {
             std::cout << "all messages confirmed" << std::endl;
-            e.connection().close();
+            d.connection().close();
         }
     }
 
-    void on_transport_close(proton::event &e) {
+    void on_transport_close(proton::transport &) override {
         sent = confirmed;
     }
 };
@@ -80,10 +76,10 @@ int main(int argc, char **argv) {
     try {
         opts.parse();
         proton::url url(address);
-        proton::io::listener listener(url.host(), url.port());
+        proton::io::socket::listener listener(url.host(), url.port());
         std::cout << "direct_send listening on " << url << std::endl;
         simple_send handler(message_count);
-        proton::io::socket_engine(listener.accept(), handler).run();
+        proton::io::socket::engine(listener.accept(), handler).run();
         return 0;
     } catch (const bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;

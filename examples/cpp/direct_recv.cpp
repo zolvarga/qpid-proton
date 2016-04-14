@@ -21,9 +21,10 @@
 
 #include "options.hpp"
 
-#include "proton/container.hpp"
 #include "proton/acceptor.hpp"
-#include "proton/event.hpp"
+#include "proton/connection.hpp"
+#include "proton/container.hpp"
+#include "proton/delivery.hpp"
 #include "proton/handler.hpp"
 #include "proton/link.hpp"
 #include "proton/url.hpp"
@@ -31,6 +32,8 @@
 
 #include <iostream>
 #include <map>
+
+#include "fake_cpp11.hpp"
 
 class direct_recv : public proton::handler {
   private:
@@ -42,26 +45,24 @@ class direct_recv : public proton::handler {
   public:
     direct_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
-    void on_start(proton::event &e) {
-        acceptor = e.container().listen(url);
+    void on_container_start(proton::container &c) override {
+        acceptor = c.listen(url);
         std::cout << "direct_recv listening on " << url << std::endl;
     }
 
-    void on_message(proton::event &e) {
-        proton::message& msg = e.message();
-        
-        if (msg.id().get<uint64_t>() < received) {
+    void on_message(proton::delivery &d, proton::message &msg) override {
+        if (proton::coerce<uint64_t>(msg.id()) < received) {
             return; // Ignore duplicate
         }
-        
+
         if (expected == 0 || received < expected) {
             std::cout << msg.body() << std::endl;
             received++;
         }
-        
+
         if (received == expected) {
-            e.receiver().close();
-            e.connection().close();
+            d.link().close();
+            d.connection().close();
 
             if (!!acceptor) acceptor.close();
         }

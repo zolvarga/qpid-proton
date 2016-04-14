@@ -19,12 +19,14 @@
  *
  */
 
+#include "proton/connection.hpp"
 #include "proton/container.hpp"
-#include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/url.hpp"
 
 #include <iostream>
+
+#include "fake_cpp11.hpp"
 
 class hello_world : public proton::handler {
   private:
@@ -33,21 +35,21 @@ class hello_world : public proton::handler {
   public:
     hello_world(const proton::url& u) : url(u) {}
 
-    void on_start(proton::event &e) {
-        proton::connection conn = e.container().connect(url);
+    void on_container_start(proton::container &c) override {
+        proton::connection conn = c.connect(url);
         conn.open_receiver(url.path());
         conn.open_sender(url.path());
     }
 
-    void on_sendable(proton::event &e) {
+    void on_sendable(proton::sender &s) override {
         proton::message m("Hello World!");
-        e.sender().send(m);
-        e.sender().close();
+        s.send(m);
+        s.close();
     }
 
-    void on_message(proton::event &e) {
-        std::cout << e.message().body() << std::endl;
-        e.connection().close();
+    void on_message(proton::delivery &d, proton::message &m) override {
+        std::cout << m.body() << std::endl;
+        d.connection().close();
     }
 };
 

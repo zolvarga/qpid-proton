@@ -31,15 +31,12 @@ namespace proton {
 using namespace codec;
 
 value::value() {}
-value::value(const null&) {}
 value::value(const value& x) { *this = x; }
 value::value(const codec::data& x) { if (!x.empty()) data().copy(x); }
 #if PN_CPP_HAS_CPP11
 value::value(value&& x) { swap(*this, x); }
 value& value::operator=(value&& x) { swap(*this, x); return *this; }
 #endif
-
-value& value::operator=(const null&) { clear(); return *this; }
 
 value& value::operator=(const value& x) {
     if (this != &x) {
@@ -55,16 +52,14 @@ void swap(value& x, value& y) { std::swap(x.data_, y.data_); }
 
 void value::clear() { if (!!data_) data_.clear(); }
 
-bool value::empty() const { return !data_ || data_.empty(); }
-
-type_id value::type() const {
-    if (empty()) return NULL_TYPE;
-    decoder d(*this);
-    return d.next_type();
+type_id value_base::type() const {
+    return (!data_ || data_.empty()) ? NULL_TYPE : codec::decoder(*this).next_type();
 }
 
+bool value_base::empty() const { return type() == NULL_TYPE; }
+
 // On demand
-codec::data& value::data() const {
+codec::data& value_base::data() const {
     if (!data_)
         data_ = codec::data::create();
     return data_;
@@ -172,31 +167,23 @@ bool operator<(const value& x, const value& y) {
     return compare(x, y) < 0;
 }
 
-std::ostream& operator<<(std::ostream& o, exact_cref<value> v) {
-    if (v.ref.empty())
+std::ostream& operator<<(std::ostream& o, const value_base& x) {
+    if (x.empty())
         return o << "<null>";
-    switch (v.ref.type()) {
-      case STRING: return o << get<std::string>(v.ref);
-      case SYMBOL: return o << get<symbol>(v.ref);
-      case DECIMAL32: return o << get<decimal32>(v.ref);
-      case DECIMAL64: return o << get<decimal64>(v.ref);
-      case DECIMAL128: return o << get<decimal128>(v.ref);
-      case UUID: return o << get<uuid>(v.ref);
-      case TIMESTAMP: return o << get<timestamp>(v.ref);
+    decoder d(x);
+    // Print std::string and proton::foo types using their own operator << consistent with C++.
+    switch (d.next_type()) {
+      case STRING: return o << get<std::string>(d);
+      case SYMBOL: return o << get<symbol>(d);
+      case DECIMAL32: return o << get<decimal32>(d);
+      case DECIMAL64: return o << get<decimal64>(d);
+      case DECIMAL128: return o << get<decimal128>(d);
+      case UUID: return o << get<uuid>(d);
+      case TIMESTAMP: return o << get<timestamp>(d);
       default:
         // Use pn_inspect for other types.
-        return o << decoder(v.ref);
+        return o << d;
     }
 }
-
-void value::get(null&) const {
-    if (type() != NULL_TYPE)
-        throw conversion_error("value is not null");
-}
-
-int64_t value::as_int() const { return get<scalar>().as_int(); }
-uint64_t value::as_uint() const { return get<scalar>().as_uint(); }
-double value::as_double() const { return get<scalar>().as_double(); }
-std::string value::as_string() const { return get<scalar>().as_string(); }
 
 }

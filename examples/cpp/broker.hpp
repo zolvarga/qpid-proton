@@ -27,9 +27,9 @@
 /// The examples add functionality as needed, this helps to make it
 /// easier to see the important differences between the examples.
 
-#include "proton/event.hpp"
-#include "proton/message.hpp"
+#include "proton/connection.hpp"
 #include "proton/handler.hpp"
+#include "proton/message.hpp"
 #include "proton/sender.hpp"
 #include "proton/transport.hpp"
 #include "proton/url.hpp"
@@ -147,30 +147,28 @@ class queues {
     uint64_t next_id_; // Use to generate unique queue IDs.
 };
 
+#include "fake_cpp11.hpp"
 
 /** Common handler logic for brokers. */
 class broker_handler : public proton::handler {
   public:
     broker_handler(queues& qs) : queues_(qs) {}
 
-    void on_link_open(proton::event &e) {
-        proton::link lnk = e.link();
+    void on_sender_open(proton::sender &sender) override {
+        proton::terminus remote_source(sender.remote_source());
+        queue &q = remote_source.dynamic() ?
+            queues_.dynamic() : queues_.get(remote_source.address());
+        sender.local_source().address(q.name());
 
-        if (!!lnk.sender()) {
-            proton::terminus remote_source(lnk.remote_source());
-            queue &q = remote_source.dynamic() ?
-                queues_.dynamic() : queues_.get(remote_source.address());
-            lnk.local_source().address(q.name());
+        q.subscribe(sender);
+        std::cout << "broker outgoing link from " << q.name() << std::endl;
+    }
 
-            q.subscribe(lnk.sender());
-            std::cout << "broker outgoing link from " << q.name() << std::endl;
-        } else {
-            // Receiver
-            std::string address = lnk.remote_target().address();
-            if (!address.empty()) {
-                lnk.local_target().address(address);
-                std::cout << "broker incoming link to " << address << std::endl;
-            }
+    void on_receiver_open(proton::receiver &receiver) override {
+        std::string address = receiver.remote_target().address();
+        if (!address.empty()) {
+            receiver.local_target().address(address);
+            std::cout << "broker incoming link to " << address << std::endl;
         }
     }
 
@@ -182,28 +180,24 @@ class broker_handler : public proton::handler {
         }
     }
 
-    void on_link_close(proton::event &e) {
-        proton::link lnk = e.link();
-
-        if (!!lnk.sender()) {
-            unsubscribe(lnk.sender());
-        }
+    void on_sender_close(proton::sender &sender) override {
+        unsubscribe(sender);
     }
 
-    void on_connection_close(proton::event &e) {
-        remove_stale_consumers(e.connection());
+    void on_connection_close(proton::connection &c) override {
+        remove_stale_consumers(c);
     }
 
-    void on_transport_close(proton::event &e) {
-        remove_stale_consumers(e.connection());
+    void on_transport_close(proton::transport &t) override {
+        remove_stale_consumers(t.connection());
     }
 
-    void on_transport_error(proton::event &e) {
-        std::cout << "broker client disconnect: " << e.transport().condition().what() << std::endl;
+    void on_transport_error(proton::transport &t) override {
+        std::cout << "broker client disconnect: " << t.condition().what() << std::endl;
     }
 
-    void on_unhandled_error(proton::event &e, const proton::condition &c) {
-        std::cerr << "broker error: " << e.name() << ":" << c.what() << std::endl;
+    void on_unhandled_error(const proton::condition &c) override {
+        std::cerr << "broker error: " << c.what() << std::endl;
     }
 
     void remove_stale_consumers(proton::connection connection) {
@@ -214,17 +208,15 @@ class broker_handler : public proton::handler {
         }
     }
 
-    void on_sendable(proton::event &e) {
-        proton::link lnk = e.link();
-        std::string address = lnk.local_source().address();
-        proton::sender s = lnk.sender();
+    void on_sendable(proton::sender &s) override {
+        std::string address = s.local_source().address();
 
         queues_.get(address).dispatch(&s);
     }
 
-    void on_message(proton::event &e) {
-        std::string address = e.link().local_target().address();
-        queues_.get(address).publish(e.message(), e.link().receiver());
+    void on_message(proton::delivery &d, proton::message &m) override {
+        std::string address = d.link().local_target().address();
+        queues_.get(address).publish(m, d.link().receiver());
     }
 
   protected:

@@ -20,7 +20,7 @@
  */
 #include "proton/handler.hpp"
 
-#include "proton/error.hpp"
+#include "proton/connection.hpp"
 #include "proton/transport.hpp"
 
 #include "proton_event.hpp"
@@ -32,33 +32,33 @@
 
 namespace proton {
 
-handler::handler(int prefetch0, bool auto_accept0, bool auto_settle0, bool peer_close_is_error0) :
-    messaging_adapter_(new messaging_adapter(*this, prefetch0, auto_accept0, auto_settle0, peer_close_is_error0))
-{}
+handler::handler() : messaging_adapter_(new messaging_adapter(*this)) {}
 
 handler::~handler(){}
 
-void handler::on_start(event &e) { on_unhandled(e); }
-void handler::on_message(event &e) { on_unhandled(e); }
-void handler::on_sendable(event &e) { on_unhandled(e); }
-void handler::on_timer(event &e) { on_unhandled(e); }
-void handler::on_transport_close(event &e) { on_unhandled(e); }
-void handler::on_transport_error(event &e) { on_unhandled_error(e, e.transport().condition()); }
-void handler::on_connection_close(event &e) { on_unhandled(e); }
-void handler::on_connection_error(event &e) { on_unhandled_error(e, e.connection().remote_condition()); }
-void handler::on_connection_open(event &e) { on_unhandled(e); }
-void handler::on_session_close(event &e) { on_unhandled(e); }
-void handler::on_session_error(event &e) { on_unhandled_error(e, e.session().remote_condition()); }
-void handler::on_session_open(event &e) { on_unhandled(e); }
-void handler::on_link_close(event &e) { on_unhandled(e); }
-void handler::on_link_error(event &e) { on_unhandled_error(e, e.link().remote_condition()); }
-void handler::on_link_open(event &e) { on_unhandled(e); }
-void handler::on_delivery_accept(event &e) { on_unhandled(e); }
-void handler::on_delivery_reject(event &e) { on_unhandled(e); }
-void handler::on_delivery_release(event &e) { on_unhandled(e); }
-void handler::on_delivery_settle(event &e) { on_unhandled(e); }
+void handler::on_container_start(container &) {}
+void handler::on_message(delivery &, message &) {}
+void handler::on_sendable(sender &) {}
+void handler::on_timer(container &) {}
+void handler::on_transport_close(transport &) {}
+void handler::on_transport_error(transport &t) { on_unhandled_error(t.condition()); }
+void handler::on_connection_close(connection &) {}
+void handler::on_connection_error(connection &c) { on_unhandled_error(c.remote_condition()); }
+void handler::on_connection_open(connection &) {}
+void handler::on_session_close(session &) {}
+void handler::on_session_error(session &s) { on_unhandled_error(s.remote_condition()); }
+void handler::on_session_open(session &) {}
+void handler::on_receiver_close(receiver &) {}
+void handler::on_receiver_error(receiver &l) { on_unhandled_error(l.remote_condition()); }
+void handler::on_receiver_open(receiver &) {}
+void handler::on_sender_close(sender &) {}
+void handler::on_sender_error(sender &l) { on_unhandled_error(l.remote_condition()); }
+void handler::on_sender_open(sender &) {}
+void handler::on_delivery_accept(delivery &) {}
+void handler::on_delivery_reject(delivery &) {}
+void handler::on_delivery_release(delivery &) {}
+void handler::on_delivery_settle(delivery &) {}
 
-void handler::on_unhandled(event &) {}
-void handler::on_unhandled_error(event &, const condition& c) { throw proton::error(c.what()); }
+void handler::on_unhandled_error(const condition& c) { throw proton::error(c.what()); }
 
 }

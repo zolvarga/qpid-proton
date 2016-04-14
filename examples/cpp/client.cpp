@@ -21,12 +21,13 @@
 
 #include "options.hpp"
 #include "proton/container.hpp"
-#include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/connection.hpp"
 
 #include <iostream>
 #include <vector>
+
+#include "fake_cpp11.hpp"
 
 class client : public proton::handler {
   private:
@@ -38,8 +39,8 @@ class client : public proton::handler {
   public:
     client(const proton::url &u, const std::vector<std::string>& r) : url(u), requests(r) {}
 
-    void on_start(proton::event &e) {
-        sender = e.container().open_sender(url);
+    void on_container_start(proton::container &c) override {
+        sender = c.open_sender(url);
         // Create a receiver with a dynamically chosen unique address.
         receiver = sender.connection().open_receiver("", proton::link_options().dynamic_address(true));
     }
@@ -52,16 +53,12 @@ class client : public proton::handler {
         sender.send(req);
     }
 
-    void on_link_open(proton::event &e) {
-        if (e.link() == receiver) {
-            send_request();
-        }
+    void on_receiver_open(proton::receiver &) override {
+        send_request();
     }
 
-    void on_message(proton::event &e) {
+    void on_message(proton::delivery &d, proton::message &response) override {
         if (requests.empty()) return; // Spurious extra message!
-
-        proton::message& response = e.message();
 
         std::cout << requests.front() << " => " << response.body() << std::endl;
         requests.erase(requests.begin());
@@ -69,7 +66,7 @@ class client : public proton::handler {
         if (!requests.empty()) {
             send_request();
         } else {
-            e.connection().close();
+            d.connection().close();
         }
     }
 };

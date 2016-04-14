@@ -76,6 +76,10 @@ terminus link::remote_target() const { return pn_link_remote_target(pn_object())
 
 std::string link::name() const { return std::string(pn_link_name(pn_object()));}
 
+container& link::container() const {
+    return connection().container();
+}
+
 class connection link::connection() const {
     return pn_session_connection(pn_link_session(pn_object()));
 }
@@ -144,6 +148,10 @@ link_iterator link_iterator::operator++() {
         obj_ = pn_link_next(obj_.pn_object(), 0);
     } while (!!obj_ && obj_.session().pn_object() != session_);
     return *this;
+}
+
+link_context &link::context() {
+    return link_context::get(pn_object());
 }
 
 }

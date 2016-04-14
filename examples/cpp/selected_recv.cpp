@@ -19,13 +19,15 @@
  *
  */
 
+#include "proton/connection.hpp"
 #include "proton/container.hpp"
-#include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/url.hpp"
 #include "proton/link_options.hpp"
 
 #include <iostream>
+
+#include "fake_cpp11.hpp"
 
 class selected_recv : public proton::handler {
   private:
@@ -34,13 +36,13 @@ class selected_recv : public proton::handler {
   public:
     selected_recv(const proton::url& u) : url(u) {}
 
-    void on_start(proton::event &e) {
-        proton::connection conn = e.container().connect(url);
+    void on_container_start(proton::container &c) override {
+        proton::connection conn = c.connect(url);
         conn.open_receiver(url.path(), proton::link_options().selector("colour = 'green'"));
     }
 
-    void on_message(proton::event &e) {
-        std::cout << e.message().body() << std::endl;
+    void on_message(proton::delivery &d, proton::message &m) override {
+        std::cout << m.body() << std::endl;
     }
 };
 

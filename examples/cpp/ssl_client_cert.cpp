@@ -20,15 +20,17 @@
  */
 
 #include "proton/acceptor.hpp"
-#include "proton/container.hpp"
-#include "proton/event.hpp"
-#include "proton/handler.hpp"
+#include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
-#include "proton/transport.hpp"
-#include "proton/ssl.hpp"
+#include "proton/container.hpp"
+#include "proton/handler.hpp"
 #include "proton/sasl.hpp"
+#include "proton/ssl.hpp"
+#include "proton/transport.hpp"
 
 #include <iostream>
+
+#include "fake_cpp11.hpp"
 
 using proton::connection_options;
 using proton::ssl_client_options;
@@ -47,22 +49,22 @@ std::string find_CN(const std::string &);
 struct server_handler : public proton::handler {
     proton::acceptor inbound_listener;
 
-    void on_connection_open(proton::event &e) {
+    void on_connection_open(proton::connection &c) override {
         std::cout << "Inbound server connection connected via SSL.  Protocol: " <<
-            e.connection().transport().ssl().protocol() << std::endl;
-        if (e.connection().transport().sasl().outcome() == sasl::OK) {
-            std::string subject = e.connection().transport().ssl().remote_subject();
+            c.transport().ssl().protocol() << std::endl;
+        if (c.transport().sasl().outcome() == sasl::OK) {
+            std::string subject = c.transport().ssl().remote_subject();
             std::cout << "Inbound client certificate identity " << find_CN(subject) << std::endl;
         }
         else {
             std::cout << "Inbound client authentication failed" <<std::endl;
-            e.connection().close();
+            c.close();
         }
         inbound_listener.close();
     }
 
-    void on_message(proton::event &e) {
-        std::cout << e.message().body() << std::endl;
+    void on_message(proton::delivery &d, proton::message &m) override {
+        std::cout << m.body() << std::endl;
     }
 };
 
@@ -75,7 +77,7 @@ class hello_world_direct : public proton::handler {
   public:
     hello_world_direct(const proton::url& u) : url(u) {}
 
-    void on_start(proton::event &e) {
+    void on_container_start(proton::container &c) override {
         // Configure listener.  Details vary by platform.
         ssl_certificate server_cert = platform_certificate("tserver", "tserverpw");
         std::string client_CA = platform_CA("tclient");
@@ -84,7 +86,7 @@ class hello_world_direct : public proton::handler {
         connection_options server_opts;
         server_opts.ssl_server_options(srv_ssl).handler(&s_handler);
         server_opts.sasl_allowed_mechs("EXTERNAL");
-        e.container().server_connection_options(server_opts);
+        c.server_connection_options(server_opts);
 
         // Configure client.
         ssl_certificate client_cert = platform_certificate("tclient", "tclientpw");
@@ -94,28 +96,28 @@ class hello_world_direct : public proton::handler {
         ssl_client_options ssl_cli(client_cert, server_CA, proton::ssl::VERIFY_PEER);
         connection_options client_opts;
         client_opts.ssl_client_options(ssl_cli).sasl_allowed_mechs("EXTERNAL");
-        e.container().client_connection_options(client_opts);
+        c.client_connection_options(client_opts);
 
-        s_handler.inbound_listener = e.container().listen(url);
-        e.container().open_sender(url);
+        s_handler.inbound_listener = c.listen(url);
+        c.open_sender(url);
     }
 
-    void on_connection_open(proton::event &e) {
-        std::string subject = e.connection().transport().ssl().remote_subject();
+    void on_connection_open(proton::connection &c) override {
+        std::string subject = c.transport().ssl().remote_subject();
         std::cout << "Outgoing client connection connected via SSL.  Server certificate identity " <<
             find_CN(subject) << std::endl;
     }
 
-    void on_sendable(proton::event &e) {
+    void on_sendable(proton::sender &s) override {
         proton::message m;
         m.body("Hello World!");
-        e.sender().send(m);
-        e.sender().close();
+        s.send(m);
+        s.close();
     }
 
-    void on_delivery_accept(proton::event &e) {
+    void on_delivery_accept(proton::delivery &d) override {
         // All done.
-        e.connection().close();
+        d.connection().close();
     }
 };
 

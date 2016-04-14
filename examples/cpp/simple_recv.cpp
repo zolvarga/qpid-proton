@@ -21,15 +21,18 @@
 
 #include "options.hpp"
 
+#include "proton/connection.hpp"
 #include "proton/container.hpp"
-#include "proton/event.hpp"
+#include "proton/delivery.hpp"
 #include "proton/handler.hpp"
 #include "proton/link.hpp"
-#include "proton/value.hpp"
 #include "proton/message_id.hpp"
+#include "proton/value.hpp"
 
 #include <iostream>
 #include <map>
+
+#include "fake_cpp11.hpp"
 
 class simple_recv : public proton::handler {
   private:
@@ -41,25 +44,23 @@ class simple_recv : public proton::handler {
   public:
     simple_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
-    void on_start(proton::event &e) {
-        receiver = e.container().open_receiver(url);
+    void on_container_start(proton::container &c) override {
+        receiver = c.open_receiver(url);
         std::cout << "simple_recv listening on " << url << std::endl;
     }
 
-    void on_message(proton::event &e) {
-        proton::message& msg = e.message();
-        
+    void on_message(proton::delivery &d, proton::message &msg) override {
         if (msg.id().get<uint64_t>() < received) {
             return; // Ignore duplicate
         }
-        
+
         if (expected == 0 || received < expected) {
             std::cout << msg.body() << std::endl;
             received++;
-            
+
             if (received == expected) {
-                e.receiver().close();
-                e.connection().close();
+                d.link().close();
+                d.connection().close();
             }
         }
     }
@@ -67,7 +68,7 @@ class simple_recv : public proton::handler {
 
 int main(int argc, char **argv) {
     std::string address("127.0.0.1:5672/examples");
-    
+
     int message_count = 100;
     options opts(argc, argv);
 
@@ -76,7 +77,7 @@ int main(int argc, char **argv) {
 
     try {
         opts.parse();
-        
+
         simple_recv recv(address, message_count);
         proton::container(recv).run();
 
@@ -86,6 +87,6 @@ int main(int argc, char **argv) {
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
     }
-    
+
     return 1;
 }

@@ -37,7 +37,6 @@ import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.impl.TransportInput;
 import org.apache.qpid.proton.engine.impl.TransportOutput;
-import org.apache.qpid.proton.engine.impl.WebSocketHandlerImpl;
 import org.apache.qpid.proton.engine.impl.WebSocketTools;
 
 /**
@@ -118,35 +117,34 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
             HandshakeStatus hstatus = result.getHandshakeStatus();
 
             int capacity = _underlyingInput.capacity();
-            if (capacity == Transport.END_OF_STREAM) {
+            if (capacity == Transport.END_OF_STREAM || capacity <= 0) {
                 _tail_closed = true;
                 if (_decodedInputBuffer.position() > 0) {
                     throw new TransportException("bytes left unconsumed");
                 }
             } else {
-                ByteBuffer tail = _underlyingInput.tail();
                 _decodedInputBuffer.flip();
-                try
-                {
-                    WebSocketTools.printBuffer("SimpleSslTransportWrapper received and decoded", _decodedInputBuffer);
-                } catch (IOException e)
-                {
-                    e.printStackTrace();
+                while (_decodedInputBuffer.hasRemaining() && capacity > 0) {
+                    ByteBuffer tail = _underlyingInput.tail();
+                    int limit = _decodedInputBuffer.limit();
+                    int overflow = _decodedInputBuffer.remaining() - capacity;
+                    if (overflow > 0) {
+                        _decodedInputBuffer.limit(limit - overflow);
+                    }
+                    tail.put(_decodedInputBuffer);
+                    _decodedInputBuffer.limit(limit);
+                    _underlyingInput.process();
+                    capacity = _underlyingInput.capacity();
                 }
 
-                int limit = _decodedInputBuffer.limit();
-                int overflow = _decodedInputBuffer.remaining() - capacity;
-                if (overflow > 0) {
-                    _decodedInputBuffer.limit(limit - overflow);
-                }
-                tail.put(_decodedInputBuffer);
-                _decodedInputBuffer.limit(limit);
-                _decodedInputBuffer.compact();
-                _underlyingInput.process();
-                capacity = _underlyingInput.capacity();
-                if (capacity == Transport.END_OF_STREAM) {
+                if (capacity == Transport.END_OF_STREAM || capacity <= 0) {
                     _tail_closed = true;
+                    if (_decodedInputBuffer.hasRemaining()) {
+                        throw new TransportException("bytes left unconsumed");
+                    }
                 }
+
+                _decodedInputBuffer.compact();
             }
 
             switch (status) {
