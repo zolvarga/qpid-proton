@@ -544,7 +544,7 @@ public class WebSocketImpl implements WebSocket
                         else if ((bytes > 0) && (bytes < _webSocketHeaderSize))
                         {
                             _webSocketHeaderSize -= bytes;
-                        }                        
+                        }
                         else
                         {
                             _underlyingOutput.pop(bytes);
