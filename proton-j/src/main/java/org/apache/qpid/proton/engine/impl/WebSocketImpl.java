@@ -22,6 +22,11 @@ package org.apache.qpid.proton.engine.impl;
 
 import org.apache.qpid.proton.engine.*;
 
+import static javax.swing.UIManager.get;
+import static org.apache.qpid.proton.engine.WebSocket.WebSocketState.PN_WS_CLOSED;
+import static org.apache.qpid.proton.engine.WebSocket.WebSocketState.PN_WS_FAILED;
+import static org.apache.qpid.proton.engine.WebSocket.WebSocketState.PN_WS_NOT_STARTED;
+import static org.apache.qpid.proton.engine.WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_CLOSE;
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.*;
 
 import java.nio.ByteBuffer;
@@ -36,12 +41,13 @@ public class WebSocketImpl implements WebSocket
     private boolean _head_closed = false;
     private final ByteBuffer _outputBuffer;
     private ByteBuffer _pingBuffer;
+    private ByteBuffer _wsInputBuffer;
 
     private int _underlyingOutputSize = 0;
     private int _webSocketHeaderSize = 0;
 
     private WebSocketHandler _webSocketHandler;
-    private WebSocketState _state = WebSocketState.PN_WS_NOT_STARTED;
+    private WebSocketState _state = PN_WS_NOT_STARTED;
 
     private String _host = "";
     private String _path = "";
@@ -56,6 +62,7 @@ public class WebSocketImpl implements WebSocket
         _inputBuffer = newWriteableBuffer(_maxFrameSize);
         _outputBuffer = newWriteableBuffer(_maxFrameSize);
         _pingBuffer = newWriteableBuffer(_maxFrameSize);
+        _wsInputBuffer = newWriteableBuffer(_maxFrameSize);
         _isWebSocketEnabled = false;
     }
 
@@ -115,7 +122,7 @@ public class WebSocketImpl implements WebSocket
         }
         else
         {
-            return WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_EMPTY;
+            return WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_UNKNOWN;
         }
     }
 
@@ -141,6 +148,12 @@ public class WebSocketImpl implements WebSocket
     public ByteBuffer getPingBuffer()
     {
         return _pingBuffer;
+    }
+
+    @Override
+    public ByteBuffer getWsInputBuffer()
+    {
+        return _wsInputBuffer;
     }
 
     @Override
@@ -189,6 +202,7 @@ public class WebSocketImpl implements WebSocket
     {
         _outputBuffer.clear();
         String request = _webSocketHandler.createUpgradeRequest(_host, _path, _port, _protocol, _additionalHeaders);
+        System.out.println(request);
         _outputBuffer.put(request.getBytes());
     }
 
@@ -220,6 +234,9 @@ public class WebSocketImpl implements WebSocket
 
         private void processInput() throws TransportException
         {
+            System.out.print("processInput: ");
+            System.out.println(_inputBuffer.toString());
+            System.out.println(_state);
             switch (_state)
             {
                 case PN_WS_CONNECTING:
@@ -231,48 +248,97 @@ public class WebSocketImpl implements WebSocket
                     break;
                 case PN_WS_CONNECTED_FLOW:
                 case PN_WS_CONNECTED_PONG:
-                    Boolean isRepeatedUpgradeAccept = false;
-                    if (_inputBuffer.remaining() > 4)
+                    // Print buffer
+                    System.out.println(convertToHex(_inputBuffer));
+
+                    if (_inputBuffer.remaining() > 0)
                     {
-                        byte[] data = new byte[_inputBuffer.remaining()];
+                        final byte[] data = new byte[_inputBuffer.remaining()];
                         _inputBuffer.get(data);
-                        if ((data[0] == 72) && (data[1] == 84) && (data[2] == 84) && (data[3] == 80))
-                        {
-                            _inputBuffer.compact();
-                            isRepeatedUpgradeAccept = true;
-                        }
-                    }
+                        _wsInputBuffer.put(data);
 
-                    if (!isRepeatedUpgradeAccept)
-                    {
-                        _inputBuffer.flip();
-
-                        switch (unwrapBuffer(_inputBuffer))
+                        _wsInputBuffer.flip();
+                        switch (unwrapBuffer(_wsInputBuffer))
                         {
+                            case WEB_SOCKET_MESSAGE_TYPE_UNKNOWN:
+                                _wsInputBuffer.position(_wsInputBuffer.limit());
+                                _wsInputBuffer.limit(_wsInputBuffer.capacity());
+                                break;
+                            case WEB_SOCKET_MESSAGE_TYPE_CHUNK:
+                                _wsInputBuffer.position(_wsInputBuffer.limit());
+                                _wsInputBuffer.limit(_wsInputBuffer.capacity());
+                                break;
                             case WEB_SOCKET_MESSAGE_TYPE_AMQP:
-                            case WEB_SOCKET_MESSAGE_TYPE_EMPTY:
-                            case WEB_SOCKET_MESSAGE_TYPE_INVALID:
-                            case WEB_SOCKET_MESSAGE_TYPE_INVALID_MASKED:
-                            case WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH:
-                                int bytes = pourAll(_inputBuffer, _underlyingInput);
+                                _wsInputBuffer.compact();
+                                _wsInputBuffer.flip();
+
+                                int bytes = pourAll(_wsInputBuffer, _underlyingInput);
                                 if (bytes == Transport.END_OF_STREAM)
                                 {
                                     _tail_closed = true;
                                 }
-                                _inputBuffer.compact();
-
                                 _underlyingInput.process();
+
+                                _wsInputBuffer.compact();
+                                _wsInputBuffer.flip();
                                 break;
                             case WEB_SOCKET_MESSAGE_TYPE_CLOSE:
-                                _pingBuffer.put(_inputBuffer);
-                                _state = WebSocketState.PN_WS_CONNECTED_CLOSING;
-                                break;
                             case WEB_SOCKET_MESSAGE_TYPE_PING:
-                                _pingBuffer.put(_inputBuffer);
-                                _state = WebSocketState.PN_WS_CONNECTED_PONG;
                                 break;
                         }
+                        // Print buffer
+                        _wsInputBuffer.flip();
+                        System.out.println(convertToHex(_wsInputBuffer));
+                        _wsInputBuffer.position(_wsInputBuffer.limit());
+                        _wsInputBuffer.limit(_wsInputBuffer.capacity());
                     }
+                    _inputBuffer.compact();
+
+//
+//                    _myInputBuffer.put(data);
+//
+//                    final byte[] data2 = new byte[_myInputBuffer.remaining()];
+//                    ByteBuffer dup = _myInputBuffer.wrap(data2);
+//                    dup.flip();
+//
+//                    System.out.println(_myInputBuffer.toString());
+//
+//                    switch (unwrapBuffer(dup))
+//                    {
+//                        case WEB_SOCKET_MESSAGE_TYPE_AMQP:
+//                            int bytes = pourAll(dup, _underlyingInput);
+//                            if (bytes == Transport.END_OF_STREAM)
+//                            {
+//                                _tail_closed = true;
+//                            }
+//                            _underlyingInput.process();
+//                            _myInputBuffer.clear();
+//                            break;
+//                        case WEB_SOCKET_MESSAGE_TYPE_CLOSE:
+//                            _pingBuffer.put(dup);
+//                            _state = WebSocketState.PN_WS_CONNECTED_CLOSING;
+//                            _myInputBuffer.clear();
+//                            break;
+//                        case WEB_SOCKET_MESSAGE_TYPE_PING:
+//                            _pingBuffer.put(dup);
+//                            _state = WebSocketState.PN_WS_CONNECTED_PONG;
+//                            _myInputBuffer.clear();
+//                            break;
+//                        case WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH:
+//                            // Continue collecting bytes
+//                            break;
+//                        case WEB_SOCKET_MESSAGE_TYPE_CONCATENATED_FRAMES:
+//                            // To do
+//                            System.out.println("ERROR: Did not parse concatenated websocket frame(s)!");
+//                            break;
+//                        case WEB_SOCKET_MESSAGE_TYPE_INVALID:
+//                        case WEB_SOCKET_MESSAGE_TYPE_INVALID_MASKED:
+//                            // Invalid message format - error
+//                            break;
+//                        case WEB_SOCKET_MESSAGE_TYPE_UNKNOWN:
+//                            // do nothing
+//                            break;
+//                    }
                     break;
                 case PN_WS_NOT_STARTED:
                 case PN_WS_CLOSED:
@@ -393,7 +459,7 @@ public class WebSocketImpl implements WebSocket
 
                             if (_head_closed)
                             {
-                                _state = WebSocketState.PN_WS_FAILED;
+                                _state = PN_WS_FAILED;
                                 return Transport.END_OF_STREAM;
                             }
                             else
@@ -409,7 +475,7 @@ public class WebSocketImpl implements WebSocket
 
                         if (_head_closed && (_outputBuffer.position() == 0))
                         {
-                            _state = WebSocketState.PN_WS_FAILED;
+                            _state = PN_WS_FAILED;
                             return Transport.END_OF_STREAM;
                         }
                         else
@@ -437,7 +503,7 @@ public class WebSocketImpl implements WebSocket
 
                         if (_head_closed)
                         {
-                            _state = WebSocketState.PN_WS_FAILED;
+                            _state = PN_WS_FAILED;
                             return Transport.END_OF_STREAM;
                         }
                         else
@@ -445,7 +511,7 @@ public class WebSocketImpl implements WebSocket
                             return _outputBuffer.position();
                         }
                     case PN_WS_CONNECTED_CLOSING:
-                        _state = WebSocketState.PN_WS_CLOSED;
+                        _state = PN_WS_CLOSED;
 
                         writeClose();
 
@@ -453,7 +519,7 @@ public class WebSocketImpl implements WebSocket
 
                         if (_head_closed)
                         {
-                            _state = WebSocketState.PN_WS_FAILED;
+                            _state = PN_WS_FAILED;
                             return Transport.END_OF_STREAM;
                         }
                         else
@@ -493,6 +559,10 @@ public class WebSocketImpl implements WebSocket
 
                             _head.limit(_outputBuffer.position());
                         }
+
+                        System.out.print("head: ");
+                        System.out.println(_head.toString());
+
                         return _head;
                     case PN_WS_NOT_STARTED:
                     case PN_WS_CLOSED:
@@ -500,6 +570,7 @@ public class WebSocketImpl implements WebSocket
                     default:
                         return _underlyingOutput.head();
                 }
+
             }
             else
             {
@@ -567,6 +638,31 @@ public class WebSocketImpl implements WebSocket
         public void close_head()
         {
             _underlyingOutput.close_head();
+        }
+
+        public final char[] HEX_DIGITS = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+
+        private String convertToHex(byte[] bb)
+        {
+            final int lgt = bb.length;
+
+            final char[] out = new char[5*lgt];
+            for( int i=0,j=0; i<lgt; i++ ){
+                out[j++] = '0';
+                out[j++] = 'x';
+                out[j++] = HEX_DIGITS[(0xF0 & bb[i]) >>> 4];
+                out[j++] = HEX_DIGITS[0x0F & bb[i]];
+                out[j++] = '|';
+            }
+            return new String(out);
+        }
+
+        private String convertToHex(ByteBuffer bb)
+        {
+            final byte[] data = new byte[bb.remaining()];
+            bb.duplicate().get(data);
+
+            return convertToHex(data);
         }
     }
 }

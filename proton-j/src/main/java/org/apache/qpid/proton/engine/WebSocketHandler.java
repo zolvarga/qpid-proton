@@ -28,13 +28,11 @@ public interface WebSocketHandler
 {
     public enum WebSocketMessageType
     {
-        WEB_SOCKET_MESSAGE_TYPE_EMPTY,
+        WEB_SOCKET_MESSAGE_TYPE_UNKNOWN,
+        WEB_SOCKET_MESSAGE_TYPE_CHUNK,
         WEB_SOCKET_MESSAGE_TYPE_AMQP,
         WEB_SOCKET_MESSAGE_TYPE_PING,
         WEB_SOCKET_MESSAGE_TYPE_CLOSE,
-        WEB_SOCKET_MESSAGE_TYPE_INVALID_MASKED,
-        WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH,
-        WEB_SOCKET_MESSAGE_TYPE_INVALID
     }
 
     String createUpgradeRequest(String hostName, String webSocketPath, int webSocketPort, String webSocketProtocol, Map<String, String> additionalHeaders);

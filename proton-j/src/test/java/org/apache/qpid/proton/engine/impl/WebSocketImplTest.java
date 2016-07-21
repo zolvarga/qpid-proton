@@ -31,6 +31,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.apache.qpid.proton.engine.WebSocketHeader.FINBIT_MASK;
+import static org.apache.qpid.proton.engine.WebSocketHeader.OPCODE_MASK;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
@@ -268,7 +270,7 @@ public class WebSocketImplTest
 
         webSocketImpl._isWebSocketEnabled = false;
 
-        assertTrue(webSocketImpl.unwrapBuffer(srcBuffer) == WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_EMPTY);
+        assertTrue(webSocketImpl.unwrapBuffer(srcBuffer) == WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_UNKNOWN);
         verify(mockWebSocketHandler, times(0)).wrapBuffer((ByteBuffer) any(), (ByteBuffer) any());
     }
 
@@ -736,7 +738,7 @@ public class WebSocketImplTest
 
         when(mockWebSocketHandler.validateUpgradeReply((ByteBuffer) any())).thenReturn(true);
         when(mockWebSocketHandler.createUpgradeRequest(_hostName, _webSocketPath, _webSocketPort, _webSocketProtocol, _additionalHeaders)).thenReturn("Request");
-        when(mockWebSocketHandler.unwrapBuffer((ByteBuffer) any())).thenReturn(WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_EMPTY);
+        when(mockWebSocketHandler.unwrapBuffer((ByteBuffer) any())).thenReturn(WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_UNKNOWN);
 
         assertTrue(webSocketImpl.getState() == WebSocket.WebSocketState.PN_WS_NOT_STARTED);
         transportWrapper.pending();
@@ -771,7 +773,7 @@ public class WebSocketImplTest
 
         when(mockWebSocketHandler.validateUpgradeReply((ByteBuffer) any())).thenReturn(true);
         when(mockWebSocketHandler.createUpgradeRequest(_hostName, _webSocketPath, _webSocketPort, _webSocketProtocol, _additionalHeaders)).thenReturn("Request");
-        when(mockWebSocketHandler.unwrapBuffer((ByteBuffer) any())).thenReturn(WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID);
+        when(mockWebSocketHandler.unwrapBuffer((ByteBuffer) any())).thenReturn(WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_UNKNOWN);
 
         assertTrue(webSocketImpl.getState() == WebSocket.WebSocketState.PN_WS_NOT_STARTED);
         transportWrapper.pending();
@@ -806,7 +808,7 @@ public class WebSocketImplTest
 
         when(mockWebSocketHandler.validateUpgradeReply((ByteBuffer) any())).thenReturn(true);
         when(mockWebSocketHandler.createUpgradeRequest(_hostName, _webSocketPath, _webSocketPort, _webSocketProtocol, _additionalHeaders)).thenReturn("Request");
-        when(mockWebSocketHandler.unwrapBuffer((ByteBuffer) any())).thenReturn(WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH);
+        when(mockWebSocketHandler.unwrapBuffer((ByteBuffer) any())).thenReturn(WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_UNKNOWN);
 
         assertTrue(webSocketImpl.getState() == WebSocket.WebSocketState.PN_WS_NOT_STARTED);
         transportWrapper.pending();
@@ -841,7 +843,7 @@ public class WebSocketImplTest
 
         when(mockWebSocketHandler.validateUpgradeReply((ByteBuffer) any())).thenReturn(true);
         when(mockWebSocketHandler.createUpgradeRequest(_hostName, _webSocketPath, _webSocketPort, _webSocketProtocol, _additionalHeaders)).thenReturn("Request");
-        when(mockWebSocketHandler.unwrapBuffer((ByteBuffer) any())).thenReturn(WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID_MASKED);
+        when(mockWebSocketHandler.unwrapBuffer((ByteBuffer) any())).thenReturn(WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_UNKNOWN);
 
         assertTrue(webSocketImpl.getState() == WebSocket.WebSocketState.PN_WS_NOT_STARTED);
         transportWrapper.pending();
@@ -987,6 +989,95 @@ public class WebSocketImplTest
         transportWrapper.pending();
         assertTrue(transportWrapper.pending() == Transport.END_OF_STREAM);
         assertTrue(webSocketImpl.getState() == WebSocket.WebSocketState.PN_WS_FAILED);
+    }
+
+    @Test
+    public void testProcess_small_chunks_one_byte_payload_no_mask()
+    {
+        init();
+
+        WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
+        WebSocketHandlerImpl mockWebSocketHandler = mock(webSocketHandler.getClass());
+
+        WebSocketImpl webSocketImpl = new WebSocketImpl();
+        webSocketImpl.configure(_hostName, _webSocketPath, _webSocketPort, _webSocketProtocol, _additionalHeaders, mockWebSocketHandler);
+
+        TransportInput mockTransportInput = mock(TransportInput.class);
+        TransportOutput mockTransportOutput = mock(TransportOutput.class);
+
+        TransportWrapper transportWrapper = webSocketImpl.wrap(mockTransportInput, mockTransportOutput);
+
+        when(mockWebSocketHandler.validateUpgradeReply((ByteBuffer) any())).thenReturn(true);
+        when(mockWebSocketHandler.createUpgradeRequest(_hostName, _webSocketPath, _webSocketPort, _webSocketProtocol, _additionalHeaders)).thenReturn("Request");
+        when(mockWebSocketHandler.unwrapBuffer((ByteBuffer) any())).thenReturn(WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_CHUNK);
+
+        assertTrue(webSocketImpl.getState() == WebSocket.WebSocketState.PN_WS_NOT_STARTED);
+        transportWrapper.pending();
+        assertTrue(webSocketImpl.getState() == WebSocket.WebSocketState.PN_WS_CONNECTING);
+        transportWrapper.process();
+        assertTrue(webSocketImpl.getState() == WebSocket.WebSocketState.PN_WS_CONNECTED_FLOW);
+
+        ByteBuffer inputBuffer = webSocketImpl.getInputBuffer();
+        ByteBuffer wsInputBuffer = webSocketImpl.getWsInputBuffer();
+
+        int payloadLength = 125;
+        int chunkSize = 10;
+        int chunkCount = 1 + payloadLength / chunkSize;
+
+        byte[] message = new byte[chunkSize];
+
+        byte finbit = (byte) (FINBIT_MASK & 0xFF);
+        byte opcode = (byte) OPCODE_MASK & 0x2;
+        byte firstbyte = (byte) (finbit | opcode);
+        byte secondbyte = (byte) payloadLength;
+
+        message[0] = firstbyte;
+        message[1] = secondbyte;
+
+        int currentLength = 0;
+        for (int i = 0; i < chunkCount + 1; i++)
+        {
+            if (i == chunkCount)
+            {
+                when(mockWebSocketHandler.unwrapBuffer((ByteBuffer) any())).thenReturn(WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_AMQP);
+            }
+
+            if (i == 0)
+            {
+                inputBuffer.clear();
+                inputBuffer.put(firstbyte);
+                currentLength += 1;
+            }
+            else if (i == 1)
+            {
+                inputBuffer.clear();
+                inputBuffer.put(secondbyte);
+                currentLength += 1;
+            }
+            else
+            {
+                char c = (char) (65+i & 0xFF);
+                for (int j = 0; j < chunkSize; j++)
+                {
+                    message[j] += c;
+                }
+                inputBuffer.clear();
+                inputBuffer.put(message);
+                currentLength += chunkSize;
+            }
+            transportWrapper.process();
+
+            assertEquals(inputBuffer.position(), 0);
+            assertEquals(inputBuffer.limit(), inputBuffer.capacity());
+            if (i == chunkCount)
+            {
+                assertEquals(wsInputBuffer.position(), 0);
+            }
+            else
+            {
+                assertEquals(wsInputBuffer.position(), currentLength);
+            }
+        }
     }
 
     @Test

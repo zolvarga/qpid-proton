@@ -190,6 +190,7 @@ public class WebSocketUpgrade
         while (scanner.hasNextLine())
         {
             String line = scanner.nextLine();
+            System.out.println(line);
 
             if ((line.toLowerCase().contains("http/1.1")) &&
                     (line.contains("101")) &&

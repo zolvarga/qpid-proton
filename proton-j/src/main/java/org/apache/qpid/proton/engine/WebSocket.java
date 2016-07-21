@@ -123,4 +123,11 @@ public interface WebSocket
      * @return The ping input buffer.
      */
     ByteBuffer getPingBuffer();
+
+    /**
+     * Access the websocket input buffer (read only).
+     *
+     * @return The wsInputBuffer input buffer.
+     */
+    ByteBuffer getWsInputBuffer();
 }

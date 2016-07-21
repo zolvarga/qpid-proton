@@ -1234,7 +1234,7 @@ public class WebSocketHandlerImplTest
         int messageLength = 10;
         ByteBuffer srcBuffer = ByteBuffer.allocate(messageLength);
 
-        assertEquals(spyWebSocketHandler.unwrapBuffer(srcBuffer), WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID);
+        assertEquals(spyWebSocketHandler.unwrapBuffer(srcBuffer), WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_UNKNOWN);
     }
 
     @Test
@@ -1247,7 +1247,7 @@ public class WebSocketHandlerImplTest
         ByteBuffer srcBuffer = ByteBuffer.allocate(messageLength);
         srcBuffer.flip();
 
-        assertEquals(spyWebSocketHandler.unwrapBuffer(srcBuffer), WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_EMPTY);
+        assertEquals(spyWebSocketHandler.unwrapBuffer(srcBuffer), WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_UNKNOWN);
     }
 
     @Test
@@ -1270,7 +1270,7 @@ public class WebSocketHandlerImplTest
         srcBuffer.put(data);
         srcBuffer.flip();
 
-        assertEquals(spyWebSocketHandler.unwrapBuffer(srcBuffer), WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH);
+        assertEquals(spyWebSocketHandler.unwrapBuffer(srcBuffer), WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_UNKNOWN);
     }
 
     @Test
@@ -1293,7 +1293,7 @@ public class WebSocketHandlerImplTest
         srcBuffer.put(data);
         srcBuffer.flip();
 
-        assertEquals(spyWebSocketHandler.unwrapBuffer(srcBuffer), WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH);
+        assertEquals(spyWebSocketHandler.unwrapBuffer(srcBuffer), WebSocketHandler.WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_UNKNOWN);
     }
 
     @Test(expected = IllegalArgumentException.class)

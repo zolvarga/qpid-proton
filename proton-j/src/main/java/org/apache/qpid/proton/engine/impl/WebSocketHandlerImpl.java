@@ -81,7 +81,6 @@ public class WebSocketHandlerImpl implements WebSocketHandler
             {
                 byte[] data = new byte[buffer.remaining()];
                 buffer.get(data);
-                buffer.compact();
 
                 retVal = _webSocketUpgrade.validateUpgradeReply(data);
                 _webSocketUpgrade = null;
@@ -194,7 +193,7 @@ public class WebSocketHandlerImpl implements WebSocketHandler
             throw new IllegalArgumentException("input parameter is null");
         }
 
-        WebSocketMessageType retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_EMPTY;
+        WebSocketMessageType retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_UNKNOWN;
 
         if (srcBuffer.remaining() > WebSocketHeader.MIN_HEADER_LENGTH)
         {
@@ -224,7 +223,7 @@ public class WebSocketHandlerImpl implements WebSocketHandler
                 }
                 else
                 {
-                    retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH;
+                    retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_CHUNK;
                 }
             }
             else if (payloadLength == WebSocketHeader.PAYLOAD_EXTENDED_64)
@@ -236,16 +235,17 @@ public class WebSocketHandlerImpl implements WebSocketHandler
                 }
                 else
                 {
-                    retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH;
+                    retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_CHUNK;
                 }
             }
 
-            if (retVal == WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_EMPTY)
+            if (finalPayloadLength > srcBuffer.remaining())
             {
-                // Now we have read all the headers, let's validate the message and prepare the return buffer
-                srcBuffer.compact();
-                srcBuffer.flip();
+                retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_CHUNK;
+            }
 
+            if (retVal == WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_UNKNOWN)
+            {
                 if (opcode == WebSocketHeader.OPCODE_BINARY)
                 {
                     retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_AMQP;
@@ -260,7 +260,7 @@ public class WebSocketHandlerImpl implements WebSocketHandler
                 }
                 else
                 {
-                    retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_INVALID;
+                    retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_UNKNOWN;
                 }
             }
         }
