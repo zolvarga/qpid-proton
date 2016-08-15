@@ -49,3 +49,5 @@ proton-j/proton-j.vpj
 proton-j/proton-j.vpw
 proton-j/proton-j.vpwhist
 proton-j/proton-j.vtg
+
+*.vscode/
