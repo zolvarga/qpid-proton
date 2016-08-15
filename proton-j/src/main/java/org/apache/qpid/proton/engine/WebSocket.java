@@ -65,6 +65,34 @@ public interface WebSocket
         PN_WS_FAILED
     }
 
+    public enum WebSocketFrameReadState
+    {
+        /**
+         * The initial read
+         */
+        INIT_READ,
+
+        /**
+         * Reading chunks of bytes until a full header is read
+         */
+        CHUNK_READ,
+
+        /**
+         * Continue reading bytes until correct number of bytes are read
+         */
+        CONTINUED_FRAME_READ,
+
+        /**
+         * Full header has been read
+         */
+        HEADER_READ,
+
+        /**
+         * An error reading
+         */
+        READ_ERROR
+    }
+
     /**
      * Configure WebSocket connection
      */
@@ -80,7 +108,7 @@ public interface WebSocket
      *
      * @return The payload of the given WebSocket frame.
      */
-    WebSocketHandler.WebSocketMessageType unwrapBuffer(ByteBuffer buffer);
+    WebSocketHandler.WebsocketTuple unwrapBuffer(ByteBuffer buffer);
 
     /**
      * Access the handler for WebSocket functions.

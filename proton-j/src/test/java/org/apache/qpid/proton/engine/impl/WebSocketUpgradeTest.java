@@ -74,12 +74,12 @@ public class WebSocketUpgradeTest
             lineCount++;
 
             String line = scanner.nextLine();
-            if (line.equals("GET /" + webSocketPath + " HTTP/1.1"))
+            if (line.equals("GET https://" + hostName + "/" + webSocketPath + " HTTP/1.1"))
             {
                 isStatusLineOk = true;
                 continue;
             }
-            if (line.equals("Connection: Upgrade"))
+            if (line.equals("Connection: Upgrade,Keep-Alive"))
             {
                 isConnectionHeaderOk = true;
                 continue;
@@ -113,7 +113,7 @@ public class WebSocketUpgradeTest
                 isWebSocketProtocolHeaderOk = true;
                 continue;
             }
-            if (line.equals("Host: host_XXX:1234567890"))
+            if (line.equals("Host: host_XXX"))
             {
                 isHostHeaderOk = true;
                 continue;
@@ -181,12 +181,12 @@ public class WebSocketUpgradeTest
             lineCount++;
 
             String line = scanner.nextLine();
-            if (line.equals("GET /" + webSocketPath + " HTTP/1.1"))
+            if (line.equals("GET https://" + hostName + "/" + webSocketPath + " HTTP/1.1"))
             {
                 isStatusLineOk = true;
                 continue;
             }
-            if (line.equals("Connection: Upgrade"))
+            if (line.equals("Connection: Upgrade,Keep-Alive"))
             {
                 isConnectionHeaderOk = true;
                 continue;
@@ -219,7 +219,7 @@ public class WebSocketUpgradeTest
                 isWebSocketProtocolHeaderOk = true;
                 continue;
             }
-            if (line.equals("Host: host_XXX:1234567890"))
+            if (line.equals("Host: host_XXX"))
             {
                 isHostHeaderOk = true;
                 continue;
@@ -269,12 +269,12 @@ public class WebSocketUpgradeTest
             lineCount++;
 
             String line = scanner.nextLine();
-            if (line.equals("GET " + webSocketPath + " HTTP/1.1"))
+            if (line.equals("GET https://" + hostName + webSocketPath + " HTTP/1.1"))
             {
                 isStatusLineOk = true;
                 continue;
             }
-            if (line.equals("Connection: Upgrade"))
+            if (line.equals("Connection: Upgrade,Keep-Alive"))
             {
                 isConnectionHeaderOk = true;
                 continue;
@@ -307,7 +307,7 @@ public class WebSocketUpgradeTest
                 isWebSocketProtocolHeaderOk = true;
                 continue;
             }
-            if (line.equals("Host: host_XXX:1234567890"))
+            if (line.equals("Host: host_XXX"))
             {
                 isHostHeaderOk = true;
                 continue;
@@ -362,12 +362,12 @@ public class WebSocketUpgradeTest
             lineCount++;
 
             String line = scanner.nextLine();
-            if (line.equals("GET /" + webSocketPath + " HTTP/1.1"))
+            if (line.equals("GET https://" + hostName + "/" + webSocketPath + " HTTP/1.1"))
             {
                 isStatusLineOk = true;
                 continue;
             }
-            if (line.equals("Connection: Upgrade"))
+            if (line.equals("Connection: Upgrade,Keep-Alive"))
             {
                 isConnectionHeaderOk = true;
                 continue;
@@ -400,7 +400,7 @@ public class WebSocketUpgradeTest
                 isWebSocketProtocolHeaderOk = true;
                 continue;
             }
-            if (line.equals("Host: host_XXX:1234567890"))
+            if (line.equals("Host: host_XXX"))
             {
                 isHostHeaderOk = true;
                 continue;

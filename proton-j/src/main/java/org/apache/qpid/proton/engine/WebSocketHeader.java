@@ -54,6 +54,7 @@ public interface WebSocketHeader
     // Masks
     public static final byte FINBIT_MASK = (byte) 0x80;
     public static final byte OPCODE_MASK = (byte) 0x0F;
+    public static final byte OPCODE_CONTINUATION = (byte) 0x00;
     public static final byte OPCODE_BINARY = (byte) 0x02;
     public static final byte OPCODE_CLOSE = (byte) 0x08;
     public static final byte OPCODE_PING = (byte) 0x09;

@@ -23,6 +23,8 @@ import org.apache.qpid.proton.engine.WebSocketHeader;
 
 import java.io.*;
 
+import java.nio.BufferOverflowException;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 
 import java.security.SecureRandom;
@@ -186,8 +188,10 @@ public class WebSocketHandlerImpl implements WebSocketHandler
     }
 
     @Override
-    public WebSocketMessageType unwrapBuffer(ByteBuffer srcBuffer)
+    public WebsocketTuple unwrapBuffer(ByteBuffer srcBuffer)
     {
+        WebsocketTuple result = new WebsocketTuple(0, WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_UNKNOWN);
+
         if (srcBuffer == null)
         {
             throw new IllegalArgumentException("input parameter is null");
@@ -208,7 +212,7 @@ public class WebSocketHandlerImpl implements WebSocketHandler
             byte maskBit = (byte) (secondByte & WebSocketHeader.MASKBIT_MASK);
             byte payloadLength = (byte) (secondByte & WebSocketHeader.PAYLOAD_MASK);
 
-            long finalPayloadLength = 0;
+            long finalPayloadLength = -1;
 
             if (payloadLength <= WebSocketHeader.PAYLOAD_SHORT_MAX)
             {
@@ -217,31 +221,27 @@ public class WebSocketHandlerImpl implements WebSocketHandler
             else if (payloadLength == WebSocketHeader.PAYLOAD_EXTENDED_16)
             {
                 // Check if we have enough bytes to read
-                if (srcBuffer.limit() > 3)
+                try
                 {
-                    finalPayloadLength = srcBuffer.getShort();
+                    //Apply mask to turn into unsigned value
+                    finalPayloadLength = srcBuffer.getShort() & 0xFFFF;
                 }
-                else
+                catch (BufferUnderflowException e)
                 {
-                    retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_CHUNK;
+                    retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_HEADER_CHUNK;
                 }
             }
             else if (payloadLength == WebSocketHeader.PAYLOAD_EXTENDED_64)
             {
-                // Check if we have enough bytes to read
-                if (srcBuffer.limit() > 9)
+                //Check if we have enough bytes to read
+                try
                 {
                     finalPayloadLength = srcBuffer.getLong();
                 }
-                else
+                catch (BufferUnderflowException e)
                 {
-                    retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_CHUNK;
+                    retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_HEADER_CHUNK;
                 }
-            }
-
-            if (finalPayloadLength > srcBuffer.remaining())
-            {
-                retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_CHUNK;
             }
 
             if (retVal == WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_UNKNOWN)
@@ -258,14 +258,21 @@ public class WebSocketHandlerImpl implements WebSocketHandler
                 {
                     retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_CLOSE;
                 }
+                else if(opcode == WebSocketHeader.OPCODE_CONTINUATION)
+                {
+                    retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_CHUNK;
+                }
                 else
                 {
                     retVal = WebSocketMessageType.WEB_SOCKET_MESSAGE_TYPE_UNKNOWN;
                 }
             }
+
+            result.setLength(finalPayloadLength);
+            result.setType(retVal);
         }
 
-        return retVal;
+        return result;
     }
 
     protected WebSocketUpgrade createWebSocketUpgrade(String hostName, String webSocketPath, int webSocketPort, String webSocketProtocol, Map<String, String> additionalHeaders)
